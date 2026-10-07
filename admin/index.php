@@ -73,7 +73,6 @@ require_once __DIR__ . '/../includes/admin_layout.php';
 <?php admin_layout_start('Dashboard Admin', 'dashboard'); ?>
   <section class="admin-welcome">
     <div>
-      <span class="admin-welcome-eyebrow">RINGKASAN RENTAL</span>
       <h2>Selamat datang kembali, Admin <span aria-hidden="true">👋</span></h2>
       <p>Kelola produk, booking, dan pembayaran rental alat pendakian.</p>
     </div>
