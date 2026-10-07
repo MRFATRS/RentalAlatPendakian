@@ -86,9 +86,5 @@ function payment_status_label($status){
 }
 
 function payment_method_available($method, array $bankConfig){
-  if ($method === 'qris' || $method === 'bayar_di_tempat') { return true; }
-  return $method === 'transfer_bank'
-    && trim($bankConfig['bank_name'] ?? '') !== ''
-    && trim($bankConfig['account_number'] ?? '') !== ''
-    && trim($bankConfig['account_holder'] ?? '') !== '';
+  return in_array($method, ['qris', 'transfer_bank', 'bayar_di_tempat'], true);
 }

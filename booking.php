@@ -6,7 +6,7 @@ $paymentConfig = require __DIR__ . '/config/payment.php';
 $variantId = filter_var($_GET['vid'] ?? $_POST['vid'] ?? null, FILTER_VALIDATE_INT);
 $variantId = $variantId !== false && $variantId !== null && $variantId > 0 ? $variantId : 0;
 $productQuery = $pdo->prepare(
-  'SELECT v.id,v.nama_varian,v.stok_total,p.id AS product_id,p.nama,p.harga_per_hari,p.deposit
+  'SELECT v.id,v.nama_varian,v.stok_total,p.id AS product_id,p.nama,p.harga_per_hari
    FROM product_variants v JOIN products p ON p.id=v.product_id
    WHERE v.id=? AND p.is_active=1'
 );
@@ -29,7 +29,6 @@ $quantity = filter_var($qtyValue, FILTER_VALIDATE_INT);
 $quantity = $quantity !== false && $quantity > 0 ? $quantity : 1;
 $pickupMethod = (string)($_POST['metode_pengambilan'] ?? 'ambil_toko');
 $paymentMethod = (string)($_POST['metode_pembayaran'] ?? 'qris');
-$scheme = (string)($_POST['skema'] ?? 'lunas');
 $csrfToken = payment_csrf_token();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -47,8 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $error = 'Jumlah unit harus antara 1 dan 100.';
     } elseif (!in_array($pickupMethod, ['ambil_toko', 'kurir'], true)) {
       $error = 'Pilih metode pengambilan yang valid.';
-    } elseif (!in_array($scheme, ['dp50', 'lunas'], true)) {
-      $error = 'Pilih skema pembayaran yang valid.';
     } elseif (!in_array($paymentMethod, ['qris', 'transfer_bank', 'bayar_di_tempat'], true)) {
       $error = 'Pilih metode pembayaran yang valid.';
     } elseif (!payment_method_available($paymentMethod, $paymentConfig)) {
@@ -56,13 +53,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
       $duration = (int)$startDate->diff($endDate)->days;
       $subtotal = $duration * (int)$item['harga_per_hari'] * $quantity;
-      $deposit = (int)$item['deposit'] * $quantity;
-      $total = $subtotal + $deposit;
-      $paymentAmount = $scheme === 'dp50' ? (int)ceil($total / 2) : $total;
+      $total = $subtotal;
+      $paymentAmount = $total;
       $calculation = [
         'duration' => $duration,
         'subtotal' => $subtotal,
-        'deposit' => $deposit,
         'total' => $total,
         'payment_amount' => $paymentAmount,
       ];
@@ -91,9 +86,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $bookingCode = 'RNT-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3)));
               $bookingInsert = $pdo->prepare(
                 'INSERT INTO bookings
-                  (kode_booking,user_id,tgl_mulai,tgl_selesai,durasi_hari,subtotal,total_deposit,total_bayar,
+                  (kode_booking,user_id,tgl_mulai,tgl_selesai,durasi_hari,subtotal,total_bayar,
                    metode_pengambilan,alamat_kirim,skema_bayar)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+                 VALUES (?,?,?,?,?,?,?,?,?,?)'
               );
               $bookingInsert->execute([
                 $bookingCode,
@@ -102,18 +97,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $end,
                 $duration,
                 $subtotal,
-                $deposit,
                 $total,
                 $pickupMethod,
                 $pickupMethod === 'kurir' ? trim((string)($_POST['alamat'] ?? '')) : null,
-                $scheme,
+                'lunas',
               ]);
               $bookingId = (int)$pdo->lastInsertId();
               $itemInsert = $pdo->prepare(
-                'INSERT INTO booking_items (booking_id,variant_id,qty,harga_per_hari,deposit,subtotal)
-                 VALUES (?,?,?,?,?,?)'
+                'INSERT INTO booking_items (booking_id,variant_id,qty,harga_per_hari,subtotal)
+                 VALUES (?,?,?,?,?)'
               );
-              $itemInsert->execute([$bookingId, $variantId, $quantity, $item['harga_per_hari'], $deposit, $subtotal]);
+              $itemInsert->execute([$bookingId, $variantId, $quantity, $item['harga_per_hari'], $subtotal]);
 
               $paymentStatus = $paymentMethod === 'bayar_di_tempat'
                 ? 'bayar_di_tempat'
@@ -126,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               );
               $paymentInsert->execute([
                 $bookingId,
-                $scheme === 'dp50' ? 'dp' : 'lunas',
+                'lunas',
                 $paymentAmount,
                 $paymentMethod,
                 $proofFilename,
@@ -153,7 +147,8 @@ include 'includes/header.php';
 ?>
 <div class="box booking-checkout">
   <h2>Sewa: <?= e($item['nama']) ?> (<?= e($item['nama_varian']) ?>)</h2>
-  <p class="muted"><?= rp($item['harga_per_hari']) ?>/hari · Deposit <?= rp($item['deposit']) ?>/unit</p>
+  <p class="muted"><?= rp($item['harga_per_hari']) ?>/hari</p>
+  <p class="muted">Jaminan: KTP/SIM wajib dibawa saat pengambilan alat.</p>
   <?php if ($error): ?><div class="alert err"><?= e($error) ?></div><?php endif; ?>
   <form method="post" enctype="multipart/form-data" id="booking-form">
     <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
@@ -166,9 +161,9 @@ include 'includes/header.php';
     <?php if ($calculation): ?>
       <hr>
       <div class="alert ok">
-        Durasi: <?= (int)$calculation['duration'] ?> hari · Subtotal: <?= rp($calculation['subtotal']) ?>
-        · Deposit: <?= rp($calculation['deposit']) ?><br>
-        <strong>Total booking: <?= rp($calculation['total']) ?></strong>
+        Durasi: <?= (int)$calculation['duration'] ?> hari<br>
+        Biaya sewa: <strong><?= rp($calculation['subtotal']) ?></strong><br>
+        <strong>Total pembayaran: <?= rp($calculation['total']) ?></strong>
       </div>
       <label for="metode_pengambilan">Metode Pengambilan</label>
       <select id="metode_pengambilan" name="metode_pengambilan">
@@ -177,18 +172,13 @@ include 'includes/header.php';
       </select>
       <label for="alamat">Alamat Pengiriman (jika kurir)</label>
       <textarea id="alamat" name="alamat"><?= e($_POST['alamat'] ?? '') ?></textarea>
-      <label for="skema">Skema Pembayaran</label>
-      <select id="skema" name="skema">
-        <option value="dp50"<?= $scheme === 'dp50' ? ' selected' : '' ?>>DP 50%</option>
-        <option value="lunas"<?= $scheme === 'lunas' ? ' selected' : '' ?>>Lunas 100%</option>
-      </select>
 
       <fieldset class="payment-methods">
         <legend>Metode Pembayaran</legend>
         <label class="payment-method-option"><input type="radio" name="metode_pembayaran" value="qris"<?= $paymentMethod === 'qris' ? ' checked' : '' ?>><span><strong>QRIS</strong><small>Bayar menggunakan QRIS</small></span></label>
-        <label class="payment-method-option<?= payment_method_available('transfer_bank', $paymentConfig) ? '' : ' is-disabled' ?>">
-          <input type="radio" name="metode_pembayaran" value="transfer_bank"<?= $paymentMethod === 'transfer_bank' ? ' checked' : '' ?><?= payment_method_available('transfer_bank', $paymentConfig) ? '' : ' disabled' ?>>
-          <span><strong>Transfer Bank</strong><small><?= payment_method_available('transfer_bank', $paymentConfig) ? 'Transfer ke rekening rental' : 'Belum tersedia: lengkapi config/payment.php' ?></small></span>
+        <label class="payment-method-option">
+          <input type="radio" name="metode_pembayaran" value="transfer_bank"<?= $paymentMethod === 'transfer_bank' ? ' checked' : '' ?>>
+          <span><strong>Transfer Bank</strong><small>Bayar melalui transfer ke rekening kami</small></span>
         </label>
         <label class="payment-method-option"><input type="radio" name="metode_pembayaran" value="bayar_di_tempat"<?= $paymentMethod === 'bayar_di_tempat' ? ' checked' : '' ?>><span><strong>Bayar di Tempat</strong><small>Bayar saat mengambil alat</small></span></label>
       </fieldset>
@@ -200,12 +190,12 @@ include 'includes/header.php';
         <p>Silakan scan QRIS menggunakan aplikasi pembayaran yang mendukung QRIS.</p>
       </section>
       <section class="payment-instructions" data-payment-panel="transfer_bank"<?= $paymentMethod === 'transfer_bank' ? '' : ' hidden' ?>>
-        <h3>Pembayaran Transfer Bank</h3>
-        <p>Bank: <strong><?= e($paymentConfig['bank_name']) ?></strong><br>
-          Nomor rekening: <strong><?= e($paymentConfig['account_number']) ?></strong><br>
-          Atas nama: <strong><?= e($paymentConfig['account_holder']) ?></strong></p>
+        <h3>PEMBAYARAN TRANSFER BANK</h3>
+        <p>Nama Bank: <strong><?= e($paymentConfig['bank']['nama_bank']) ?></strong><br>
+          Nomor Rekening: <strong><?= e($paymentConfig['bank']['nomor_rekening']) ?></strong><br>
+          Atas Nama: <strong><?= e($paymentConfig['bank']['nama_pemilik']) ?></strong></p>
         <p>Total pembayaran: <strong><?= rp($calculation['payment_amount']) ?></strong></p>
-        <p>Silakan transfer sesuai nominal pembayaran, kemudian unggah bukti transfer.</p>
+        <p>Silakan transfer sesuai total pembayaran, kemudian upload bukti transfer.</p>
       </section>
       <section class="payment-instructions" data-payment-panel="bayar_di_tempat"<?= $paymentMethod === 'bayar_di_tempat' ? '' : ' hidden' ?>>
         <h3>Bayar di Tempat</h3>

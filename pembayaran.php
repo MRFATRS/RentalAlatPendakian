@@ -10,7 +10,7 @@ if ($paymentId === false || $paymentId === null || $paymentId < 1) {
 
 $paymentQuery = $pdo->prepare(
   "SELECT pay.id,pay.booking_id,pay.jumlah,pay.metode,pay.status,pay.status_pembayaran,pay.bukti_bayar,
-      b.kode_booking,b.user_id,b.total_bayar,b.tgl_mulai,b.tgl_selesai,
+      b.kode_booking,b.user_id,b.subtotal,b.total_bayar,b.tgl_mulai,b.tgl_selesai,
       GROUP_CONCAT(CONCAT(p.nama,' ',v.nama_varian,' x',bi.qty) SEPARATOR ', ') AS items
    FROM payments pay
    JOIN bookings b ON b.id=pay.booking_id
@@ -91,7 +91,8 @@ include 'includes/header.php';
 <section class="box payment-resubmit">
   <h2>Kirim Bukti Pembayaran</h2>
   <p class="muted">Booking <?= e($payment['kode_booking']) ?> · <?= e($payment['items']) ?></p>
-  <p>Total booking: <strong><?= rp($payment['total_bayar']) ?></strong><br>
+  <p>Biaya sewa: <strong><?= rp($payment['subtotal']) ?></strong><br>
+    Total pembayaran: <strong><?= rp($payment['total_bayar']) ?></strong><br>
     Jumlah pembayaran: <strong><?= rp($payment['jumlah']) ?></strong></p>
   <?php if ($error): ?><div class="alert err"><?= e($error) ?></div><?php endif; ?>
 
@@ -105,9 +106,9 @@ include 'includes/header.php';
       <fieldset class="payment-methods">
         <legend>Metode Pembayaran</legend>
         <label class="payment-method-option"><input type="radio" name="metode_pembayaran" value="qris"<?= $method === 'qris' ? ' checked' : '' ?>><span><strong>QRIS</strong><small>Scan QRIS merchant</small></span></label>
-        <label class="payment-method-option<?= payment_method_available('transfer_bank', $paymentConfig) ? '' : ' is-disabled' ?>">
-          <input type="radio" name="metode_pembayaran" value="transfer_bank"<?= $method === 'transfer_bank' ? ' checked' : '' ?><?= payment_method_available('transfer_bank', $paymentConfig) ? '' : ' disabled' ?>>
-          <span><strong>Transfer Bank</strong><small><?= payment_method_available('transfer_bank', $paymentConfig) ? 'Transfer ke rekening rental' : 'Belum tersedia: lengkapi config/payment.php' ?></small></span>
+        <label class="payment-method-option">
+          <input type="radio" name="metode_pembayaran" value="transfer_bank"<?= $method === 'transfer_bank' ? ' checked' : '' ?>>
+          <span><strong>Transfer Bank</strong><small>Bayar melalui transfer ke rekening kami</small></span>
         </label>
       </fieldset>
       <div class="payment-instructions">
@@ -117,9 +118,11 @@ include 'includes/header.php';
           <p>Silakan scan QRIS dan bayar sesuai jumlah pembayaran di atas.</p>
         </div>
         <div data-resubmit-panel="transfer_bank"<?= $method === 'transfer_bank' ? '' : ' hidden' ?>>
-          <p>Bank: <strong><?= e($paymentConfig['bank_name']) ?></strong><br>
-            Nomor rekening: <strong><?= e($paymentConfig['account_number']) ?></strong><br>
-            Atas nama: <strong><?= e($paymentConfig['account_holder']) ?></strong></p>
+          <p>Nama Bank: <strong><?= e($paymentConfig['bank']['nama_bank']) ?></strong><br>
+            Nomor Rekening: <strong><?= e($paymentConfig['bank']['nomor_rekening']) ?></strong><br>
+            Atas Nama: <strong><?= e($paymentConfig['bank']['nama_pemilik']) ?></strong></p>
+          <p>Total pembayaran: <strong><?= rp($payment['jumlah']) ?></strong></p>
+          <p>Silakan transfer sesuai total pembayaran, kemudian upload bukti transfer.</p>
         </div>
         <label for="payment-proof">Bukti Pembayaran</label>
         <input id="payment-proof" type="file" name="bukti_pembayaran" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>

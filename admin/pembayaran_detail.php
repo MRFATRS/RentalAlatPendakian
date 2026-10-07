@@ -9,7 +9,7 @@ if ($paymentId === false || $paymentId === null || $paymentId < 1) {
 
 $paymentQuery = $pdo->prepare(
   'SELECT pay.*,b.kode_booking,b.user_id,b.tgl_mulai,b.tgl_selesai,b.durasi_hari,b.subtotal,
-      b.total_deposit,b.total_bayar,b.status AS status_booking,b.metode_pengambilan,
+      b.total_bayar,b.status AS status_booking,b.metode_pengambilan,
       u.nama AS nama_user,u.email,u.no_whatsapp
    FROM payments pay
    JOIN bookings b ON b.id=pay.booking_id
@@ -23,7 +23,7 @@ if (!$payment) {
   exit;
 }
 $itemQuery = $pdo->prepare(
-  'SELECT p.nama,v.nama_varian,bi.qty,bi.harga_per_hari,bi.deposit,bi.subtotal
+  'SELECT p.nama,v.nama_varian,bi.qty,bi.harga_per_hari,bi.subtotal
    FROM booking_items bi
    JOIN product_variants v ON v.id=bi.variant_id
    JOIN products p ON p.id=v.product_id
@@ -37,13 +37,9 @@ $csrfToken = payment_csrf_token();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = (string)($_POST['action'] ?? '');
-  $isCash = payment_method_key($payment['metode']) === 'bayar_di_tempat';
   if (!payment_verify_csrf($_POST['csrf_token'] ?? null)) {
     $error = 'Permintaan tidak valid atau kedaluwarsa. Silakan muat ulang halaman.';
-  } elseif ($action === 'terima'
-    && in_array($payment['status_pembayaran'], ['menunggu_verifikasi', 'bayar_di_tempat'], true)
-    && $payment['status_booking'] === 'menunggu_verifikasi'
-    && ($isCash || (bool)$payment['bukti_bayar'])) {
+  } elseif ($action === 'terima') {
     try {
       $pdo->beginTransaction();
       $lock = $pdo->prepare('SELECT status_pembayaran,metode,bukti_bayar FROM payments WHERE id=? FOR UPDATE');
@@ -52,12 +48,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $bookingLock = $pdo->prepare('SELECT status FROM bookings WHERE id=? FOR UPDATE');
       $bookingLock->execute([(int)$payment['booking_id']]);
       $currentBookingStatus = $bookingLock->fetchColumn();
-      if (!$current
-        || !in_array($current['status_pembayaran'], ['menunggu_verifikasi', 'bayar_di_tempat'], true)
-        || $currentBookingStatus !== 'menunggu_verifikasi'
-        || (payment_method_key($current['metode']) !== 'bayar_di_tempat' && !$current['bukti_bayar'])) {
+      $isCash = $current && payment_method_key($current['metode']) === 'bayar_di_tempat';
+      if (!$current || !in_array($current['status_pembayaran'], ['menunggu_verifikasi', 'bayar_di_tempat'], true)) {
         $pdo->rollBack();
-        $error = 'Pembayaran atau booking sudah berubah status, atau bukti belum tersedia.';
+        $error = 'Pembayaran tidak lagi berstatus menunggu verifikasi. Muat ulang halaman.';
+      } elseif (!in_array($currentBookingStatus, ['menunggu_verifikasi', 'disetujui'], true)) {
+        $pdo->rollBack();
+        $error = 'Booking sudah dibatalkan atau selesai sehingga pembayaran tidak dapat dikonfirmasi.';
+      } elseif (!$isCash && !$current['bukti_bayar']) {
+        $pdo->rollBack();
+        $error = 'Bukti pembayaran belum tersedia.';
       } else {
         $updatePayment = $pdo->prepare(
           "UPDATE payments SET status='berhasil',status_pembayaran='lunas',paid_at=NOW(),
@@ -76,25 +76,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if ($pdo->inTransaction()) { $pdo->rollBack(); }
       $error = 'Konfirmasi pembayaran gagal disimpan. Periksa database dan coba kembali.';
     }
-  } elseif ($action === 'tolak'
-    && !$isCash
-    && $payment['status_pembayaran'] === 'menunggu_verifikasi'
-    && $payment['status_booking'] === 'menunggu_verifikasi'
-    && $payment['bukti_bayar']) {
+  } elseif ($action === 'tolak') {
     try {
-      $update = $pdo->prepare(
-        "UPDATE payments SET status='gagal',status_pembayaran='ditolak',
-            waktu_verifikasi=NOW(),diverifikasi_oleh=? WHERE id=? AND status_pembayaran='menunggu_verifikasi'
-            AND EXISTS (SELECT 1 FROM bookings WHERE bookings.id=payments.booking_id AND bookings.status='menunggu_verifikasi')"
-      );
-      $update->execute([(int)$_SESSION['admin_id'], $paymentId]);
-      if ($update->rowCount() !== 1) {
-        $error = 'Status pembayaran sudah berubah. Muat ulang halaman.';
+      $pdo->beginTransaction();
+      $lock = $pdo->prepare('SELECT status_pembayaran,metode,bukti_bayar FROM payments WHERE id=? FOR UPDATE');
+      $lock->execute([$paymentId]);
+      $current = $lock->fetch();
+      $bookingLock = $pdo->prepare('SELECT status FROM bookings WHERE id=? FOR UPDATE');
+      $bookingLock->execute([(int)$payment['booking_id']]);
+      $currentBookingStatus = $bookingLock->fetchColumn();
+
+      if (!$current || $current['status_pembayaran'] !== 'menunggu_verifikasi') {
+        $pdo->rollBack();
+        $error = 'Pembayaran tidak lagi berstatus menunggu verifikasi. Muat ulang halaman.';
+      } elseif (payment_method_key($current['metode']) === 'bayar_di_tempat') {
+        $pdo->rollBack();
+        $error = 'Pembayaran di tempat tidak dapat ditolak sebelum diterima.';
+      } elseif (!$current['bukti_bayar']) {
+        $pdo->rollBack();
+        $error = 'Bukti pembayaran belum tersedia.';
+      } elseif (!in_array($currentBookingStatus, ['menunggu_verifikasi', 'disetujui'], true)) {
+        $pdo->rollBack();
+        $error = 'Booking sudah dibatalkan atau selesai sehingga pembayaran tidak dapat ditolak.';
       } else {
+        $update = $pdo->prepare(
+          "UPDATE payments SET status='gagal',status_pembayaran='ditolak',
+              waktu_verifikasi=NOW(),diverifikasi_oleh=? WHERE id=? AND status_pembayaran='menunggu_verifikasi'"
+        );
+        $update->execute([(int)$_SESSION['admin_id'], $paymentId]);
+        if ($currentBookingStatus === 'disetujui') {
+          $resetBooking = $pdo->prepare("UPDATE bookings SET status='menunggu_verifikasi' WHERE id=? AND status='disetujui'");
+          $resetBooking->execute([(int)$payment['booking_id']]);
+        }
+        $pdo->commit();
         header('Location: pembayaran_detail.php?id=' . (int)$paymentId . '&pesan=rejected');
         exit;
       }
     } catch (PDOException $exception) {
+      if ($pdo->inTransaction()) { $pdo->rollBack(); }
       $error = 'Penolakan pembayaran gagal disimpan. Periksa database dan coba kembali.';
     }
   } else {
@@ -116,7 +135,7 @@ $proofPath = __DIR__ . '/../uploads/bukti_pembayaran/' . $proof;
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-<nav><a class="brand" href="index.php">Admin · Rental Pendakian</a><div><span><?= e($_SESSION['admin_username']) ?></span><a href="pembayaran.php">Pembayaran</a><a href="logout.php">Logout Admin</a></div></nav>
+<nav><a class="brand" href="index.php">Admin · Rental Pendakian</a><div><span><?= e($_SESSION['admin_username']) ?></span><a href="ubah_password.php">Ubah Password</a><a href="pembayaran.php">Pembayaran</a><a href="logout.php">Logout Admin</a></div></nav>
 <main class="admin-dashboard">
   <div class="admin-page-heading"><div><h1>Detail Pembayaran</h1><p>Booking <?= e($payment['kode_booking']) ?></p></div><a class="btn alt" href="pembayaran.php">Kembali</a></div>
   <?php if ($error): ?><div class="alert err"><?= e($error) ?></div><?php endif; ?>
@@ -141,7 +160,8 @@ $proofPath = __DIR__ . '/../uploads/bukti_pembayaran/' . $proof;
     <section class="admin-section">
       <h2>Informasi Pembayaran</h2>
       <dl class="payment-detail-list">
-        <div><dt>Total booking</dt><dd><?= rp($payment['total_bayar']) ?></dd></div>
+        <div><dt>Biaya sewa</dt><dd><?= rp($payment['subtotal']) ?></dd></div>
+        <div><dt>Total pembayaran</dt><dd><?= rp($payment['total_bayar']) ?></dd></div>
         <div><dt>Jumlah pembayaran</dt><dd><?= rp($payment['jumlah']) ?></dd></div>
         <div><dt>Metode</dt><dd><?= e(payment_method_label($payment['metode'])) ?></dd></div>
         <div><dt>Status pembayaran</dt><dd><span class="payment-status status-<?= e($payment['status_pembayaran']) ?>"><?= e(payment_status_label($payment['status_pembayaran'])) ?></span></dd></div>

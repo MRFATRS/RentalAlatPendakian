@@ -50,7 +50,7 @@ CREATE TABLE products (
   nama            VARCHAR(150) NOT NULL,
   deskripsi       TEXT,
   harga_per_hari  INT NOT NULL,
-  deposit         INT NOT NULL DEFAULT 0,         -- jaminan per unit
+  deposit         INT NOT NULL DEFAULT 0,         -- legacy field; not used in rental pricing
   gambar          VARCHAR(255),
   is_active       TINYINT(1) NOT NULL DEFAULT 1,
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -74,12 +74,12 @@ CREATE TABLE bookings (
   tgl_mulai          DATE NOT NULL,
   tgl_selesai        DATE NOT NULL,
   durasi_hari        INT NOT NULL,
-  subtotal           INT NOT NULL,
-  total_deposit      INT NOT NULL DEFAULT 0,
-  total_bayar        INT NOT NULL,                 -- subtotal + deposit (+ ongkir jika kurir)
+  subtotal           INT NOT NULL,                 -- biaya sewa: harga_per_hari x qty x durasi
+  total_deposit      INT NOT NULL DEFAULT 0,        -- legacy field; new bookings always store 0
+  total_bayar        INT NOT NULL,                  -- biaya sewa only
   metode_pengambilan ENUM('ambil_toko','kurir') NOT NULL DEFAULT 'ambil_toko',
   alamat_kirim       TEXT NULL,
-  skema_bayar        ENUM('dp50','lunas') NOT NULL,
+  skema_bayar        ENUM('lunas') NOT NULL DEFAULT 'lunas',
   status             ENUM('menunggu_verifikasi','disetujui','sedang_disewa','selesai','denda','dibatalkan')
                      NOT NULL DEFAULT 'menunggu_verifikasi',
   tgl_kembali_aktual DATE NULL,
@@ -95,7 +95,7 @@ CREATE TABLE booking_items (
   variant_id      INT NOT NULL,
   qty             INT NOT NULL,
   harga_per_hari  INT NOT NULL,                    -- snapshot harga saat booking
-  deposit         INT NOT NULL DEFAULT 0,
+  deposit         INT NOT NULL DEFAULT 0,           -- legacy field; new booking items always store 0
   subtotal        INT NOT NULL,
   FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
   FOREIGN KEY (variant_id) REFERENCES product_variants(id)
@@ -105,7 +105,7 @@ CREATE TABLE booking_items (
 CREATE TABLE payments (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   booking_id     INT NOT NULL,
-  jenis          ENUM('dp','pelunasan','lunas','denda') NOT NULL,
+  jenis          ENUM('lunas','denda') NOT NULL,
   jumlah         INT NOT NULL,
   metode         VARCHAR(50),                      -- QRIS / Transfer Bank / Bayar di Tempat
   order_id       VARCHAR(100) NULL,
@@ -141,9 +141,9 @@ INSERT INTO categories (nama, slug) VALUES
  ('Tenda','tenda'), ('Carrier','carrier'), ('Sleeping Bag','sleeping-bag'),
  ('Alat Masak','alat-masak'), ('Penerangan','penerangan');
 
-INSERT INTO products (category_id, nama, deskripsi, harga_per_hari, deposit) VALUES
- (1, 'Tenda Dome Kapasitas 4', 'Tenda dome double layer untuk 4 orang.', 40000, 100000),
- (2, 'Carrier 60L',            'Carrier 60 liter dengan rain cover.',     25000,  50000);
+INSERT INTO products (category_id, nama, deskripsi, harga_per_hari) VALUES
+ (1, 'Tenda Dome Kapasitas 4', 'Tenda dome double layer untuk 4 orang.', 40000),
+ (2, 'Carrier 60L',            'Carrier 60 liter dengan rain cover.',     25000);
 
 INSERT INTO product_variants (product_id, nama_varian, stok_total) VALUES
  (1, 'Hijau', 5), (1, 'Oranye', 3),

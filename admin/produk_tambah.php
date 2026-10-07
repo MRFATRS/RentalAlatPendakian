@@ -64,7 +64,7 @@ $csrfToken = admin_product_csrf_token();
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-<nav><a class="brand" href="index.php">Admin · Rental Pendakian</a><div><a href="index.php">Kembali ke Dashboard</a><a href="logout.php">Logout Admin</a></div></nav>
+<nav><a class="brand" href="index.php">Admin · Rental Pendakian</a><div><a href="ubah_password.php">Ubah Password</a><a href="index.php">Kembali ke Dashboard</a><a href="logout.php">Logout Admin</a></div></nav>
 <main class="admin-dashboard">
   <div class="admin-page-heading"><div><h1>Tambah Produk</h1><p>Isi detail perlengkapan yang akan ditampilkan di katalog.</p></div></div>
   <section class="admin-form-card">

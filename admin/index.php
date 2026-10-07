@@ -51,6 +51,7 @@ $messages = [
   'deleted_no_image' => ['err', 'Produk berhasil dihapus, tetapi file fotonya gagal dihapus dari server.'],
   'booking_updated' => ['ok', 'Status booking berhasil diperbarui.'],
   'payment_required' => ['err', 'Booking belum dapat diproses sebelum pembayaran dikonfirmasi lunas.'],
+  'password_diubah' => ['ok', 'Password berhasil diubah.'],
   'csrf' => ['err', 'Permintaan tidak valid atau kedaluwarsa. Silakan coba kembali.'],
   'invalid' => ['err', 'Data perubahan status tidak valid.'],
   'not_found' => ['err', 'Produk tidak ditemukan.'],
@@ -68,7 +69,7 @@ $notice = $messages[$_GET['pesan'] ?? ''] ?? null;
 <body>
 <nav>
   <a class="brand" href="index.php">Admin · Rental Pendakian</a>
-  <div><span><?= e($_SESSION['admin_username']) ?></span><a href="pembayaran.php">Pembayaran</a><a href="../index.php">Lihat Situs</a><a href="logout.php">Logout Admin</a></div>
+  <div><span><?= e($_SESSION['admin_username']) ?></span><a href="ubah_password.php">Ubah Password</a><a href="pembayaran.php">Pembayaran</a><a href="../index.php">Lihat Situs</a><a href="logout.php">Logout Admin</a></div>
 </nav>
 <main class="admin-dashboard">
   <div class="admin-page-heading">
@@ -114,14 +115,14 @@ $notice = $messages[$_GET['pesan'] ?? ''] ?? null;
     <?php if ($bookings): ?>
       <div class="admin-table-wrap">
         <table class="admin-table">
-          <thead><tr><th>Kode</th><th>Penyewa</th><th>Tanggal</th><th>Total</th><th>KTP/SIM</th><th>Status</th></tr></thead>
+          <thead><tr><th>Kode</th><th>Penyewa</th><th>Tanggal</th><th>Biaya Sewa</th><th>KTP/SIM</th><th>Status</th></tr></thead>
           <tbody>
           <?php foreach ($bookings as $booking): ?>
             <tr>
               <td><?= e($booking['kode_booking']) ?></td>
               <td><?= e($booking['nama']) ?><br><small><?= e($booking['no_whatsapp']) ?></small></td>
               <td><?= e($booking['tgl_mulai']) ?> → <?= e($booking['tgl_selesai']) ?></td>
-              <td><?= rp($booking['total_bayar']) ?></td>
+              <td><?= rp($booking['subtotal']) ?></td>
               <td><a href="../uploads/<?= e(basename($booking['foto_identitas'])) ?>" target="_blank" rel="noopener">Lihat</a></td>
               <td><form method="post">
                 <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">

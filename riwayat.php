@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/manual_payments.php';
 login_required();
 $st = $pdo->prepare(
-  "SELECT b.id,b.kode_booking,b.tgl_mulai,b.tgl_selesai,b.total_bayar,b.status AS status_booking,
+  "SELECT b.id,b.kode_booking,b.tgl_mulai,b.tgl_selesai,b.durasi_hari,b.subtotal,b.total_bayar,b.status AS status_booking,
       item_list.items,pay.id AS payment_id,pay.metode,pay.jumlah AS payment_amount,
       pay.status_pembayaran,pay.bukti_bayar
    FROM bookings b
@@ -51,7 +51,9 @@ include 'includes/header.php';
         <p><?= e($row['items']) ?></p>
         <dl>
           <div><dt>Tanggal sewa</dt><dd><?= e($row['tgl_mulai']) ?> s.d. <?= e($row['tgl_selesai']) ?></dd></div>
-          <div><dt>Total booking</dt><dd><?= rp($row['total_bayar']) ?></dd></div>
+          <div><dt>Lama sewa</dt><dd><?= (int)$row['durasi_hari'] ?> hari</dd></div>
+          <div><dt>Biaya sewa</dt><dd><?= rp($row['subtotal']) ?></dd></div>
+          <div><dt>Total pembayaran</dt><dd><?= rp($row['total_bayar']) ?></dd></div>
           <div><dt>Metode pembayaran</dt><dd><?= e(payment_method_label($row['metode'])) ?></dd></div>
           <div><dt>Jumlah tagihan</dt><dd><?= $row['payment_amount'] !== null ? rp($row['payment_amount']) : '—' ?></dd></div>
           <div><dt>Status pembayaran</dt><dd><span class="payment-status status-<?= e($row['status_pembayaran'] ?? 'belum_dibayar') ?>"><?= e(payment_status_label($row['status_pembayaran'])) ?></span></dd></div>

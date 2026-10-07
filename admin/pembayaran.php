@@ -4,7 +4,7 @@ admin_required();
 
 $rows = $pdo->query(
   "SELECT pay.id AS payment_id,pay.jumlah,pay.metode,pay.status_pembayaran,pay.bukti_bayar,
-      pay.waktu_upload,pay.created_at,b.id AS booking_id,b.kode_booking,b.total_bayar,
+      pay.waktu_upload,pay.created_at,b.id AS booking_id,b.kode_booking,b.subtotal,
       u.nama AS nama_user,
       GROUP_CONCAT(CONCAT(p.nama,' x',bi.qty) SEPARATOR ', ') AS items
    FROM payments pay
@@ -36,7 +36,7 @@ if (in_array($statusFilter, $allowedStatuses, true)) {
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-<nav><a class="brand" href="index.php">Admin · Rental Pendakian</a><div><span><?= e($_SESSION['admin_username']) ?></span><a href="index.php">Dashboard</a><a href="logout.php">Logout Admin</a></div></nav>
+<nav><a class="brand" href="index.php">Admin · Rental Pendakian</a><div><span><?= e($_SESSION['admin_username']) ?></span><a href="ubah_password.php">Ubah Password</a><a href="index.php">Dashboard</a><a href="logout.php">Logout Admin</a></div></nav>
 <main class="admin-dashboard">
 <div class="admin-page-heading">
   <div><h1>Pembayaran</h1><p>Periksa bukti pembayaran dan status transaksi booking.</p></div>
@@ -52,14 +52,14 @@ if (in_array($statusFilter, $allowedStatuses, true)) {
   <?php if ($rows): ?>
     <div class="admin-table-wrap">
       <table class="admin-table payment-admin-table">
-        <thead><tr><th>Booking</th><th>User</th><th>Alat</th><th>Total Booking</th><th>Jumlah Dibayar</th><th>Metode</th><th>Status Pembayaran</th><th>Bukti</th><th>Waktu</th><th>Aksi</th></tr></thead>
+        <thead><tr><th>Booking</th><th>User</th><th>Alat</th><th>Biaya Sewa</th><th>Jumlah Dibayar</th><th>Metode</th><th>Status Pembayaran</th><th>Bukti</th><th>Waktu</th><th>Aksi</th></tr></thead>
         <tbody>
         <?php foreach ($rows as $row): ?>
           <tr>
             <td><?= e($row['kode_booking']) ?></td>
             <td><?= e($row['nama_user']) ?></td>
             <td><?= e($row['items'] ?? '—') ?></td>
-            <td><?= rp($row['total_bayar']) ?></td>
+            <td><?= rp($row['subtotal']) ?></td>
             <td><?= rp($row['jumlah']) ?></td>
             <td><?= e(payment_method_label($row['metode'])) ?></td>
             <td><span class="payment-status status-<?= e($row['status_pembayaran']) ?>"><?= e(payment_status_label($row['status_pembayaran'])) ?></span></td>
