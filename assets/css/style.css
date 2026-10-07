@@ -427,6 +427,78 @@ footer { color: #d9e3dc; background: var(--forest-deep); }
 .admin-delete-card h2 { margin: 16px 0 5px; color: var(--forest); }
 .admin-delete-card > p { margin-top: 0; }
 .admin-delete-image { display: block; width: min(100%, 340px); max-height: 230px; margin: 17px 0; border-radius: 12px; object-fit: cover; }
+.admin-page-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.payment-methods {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.payment-methods legend { padding: 0 6px; color: var(--forest); font-weight: 700; }
+.payment-method-option {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid #e3e9e2;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.payment-method-option input { width: auto; margin: 0; accent-color: var(--green); }
+.payment-method-option span { display: grid; gap: 3px; }
+.payment-method-option small, .payment-proof-field small { color: var(--muted); font-size: .8rem; }
+.payment-method-option.is-disabled { color: #879189; background: #f5f6f4; cursor: not-allowed; }
+.payment-instructions {
+  margin: 16px 0;
+  padding: 18px;
+  border: 1px solid #e2eade;
+  border-radius: 12px;
+  background: #f8faf7;
+}
+.payment-instructions h3 { margin: 0 0 9px; color: var(--forest); }
+.payment-instructions p { line-height: 1.6; }
+.payment-instructions[hidden], [data-resubmit-panel][hidden] { display: none; }
+.merchant-qris {
+  display: block;
+  width: min(100%, 310px);
+  max-height: 310px;
+  margin: 14px auto;
+  border-radius: 10px;
+  object-fit: contain;
+  background: #fff;
+}
+.payment-proof-field { margin: 16px 0; }
+.payment-proof-field label { display: block; margin-bottom: 7px; font-weight: 650; }
+.payment-proof-field input { margin-bottom: 5px; }
+.booking-submit { width: 100%; }
+.payment-history-list { display: grid; gap: 17px; }
+.payment-history-card {
+  padding: 21px;
+  border: 1px solid rgba(31, 61, 50, .07);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(31, 61, 50, .05);
+}
+.payment-history-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.payment-history-heading strong { color: var(--forest); }
+.payment-history-heading > span { color: var(--muted); font-size: .88rem; }
+.payment-history-card dl, .payment-detail-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 17px 0; }
+.payment-history-card dl > div, .payment-detail-list > div { min-width: 0; }
+.payment-history-card dt, .payment-detail-list dt { color: var(--muted); font-size: .78rem; }
+.payment-history-card dd, .payment-detail-list dd { margin: 4px 0 0; overflow-wrap: anywhere; font-size: .9rem; font-weight: 650; }
+.payment-status { display: inline-flex; padding: 5px 9px; border-radius: 999px; color: #6b5a2c; background: #fff2cd; font-size: .76rem; font-weight: 700; white-space: nowrap; }
+.status-lunas { color: #28613a; background: #dff2e3; }
+.status-ditolak { color: #8e3934; background: #f8e0de; }
+.status-bayar_di_tempat { color: #31577a; background: #e2eff9; }
+.payment-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.payment-admin-table { min-width: 1180px; }
+.payment-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.payment-detail-grid .admin-section { min-width: 0; }
+.payment-proof-link { display: inline-grid; gap: 8px; color: var(--forest); font-size: .84rem; font-weight: 650; text-decoration: none; }
+.payment-proof-image { display: block; width: min(100%, 360px); max-height: 330px; border: 1px solid var(--line); border-radius: 12px; background: #f8faf7; object-fit: contain; }
+.payment-resubmit { max-width: 720px; margin: 0 auto; }
 
 @media (max-width: 1000px) {
   .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
@@ -441,6 +513,7 @@ footer { color: #d9e3dc; background: var(--forest-deep); }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card-image { height: 180px; }
   .footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; padding: 38px 24px 30px; }
+  .payment-detail-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {
   nav { align-items: flex-start; flex-direction: column; gap: 8px; padding: 11px 16px; }
@@ -459,6 +532,11 @@ footer { color: #d9e3dc; background: var(--forest-deep); }
   .card-content { padding: 16px; }
   .footer-inner { grid-template-columns: 1fr 1fr; gap: 25px 16px; padding: 32px 18px 26px; }
   .footer-about { grid-column: 1 / -1; }
+  .admin-page-heading { align-items: flex-start; flex-direction: column; }
+  .admin-page-actions { width: 100%; }
+  .payment-history-card dl, .payment-detail-list { grid-template-columns: 1fr; gap: 10px; }
+  .payment-history-card { padding: 17px; }
+  .payment-history-heading { align-items: flex-start; flex-direction: column; gap: 5px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }

@@ -18,6 +18,8 @@ function stok_tersedia($pdo, $vid, $start, $end){
   $q = $pdo->prepare("SELECT v.stok_total - COALESCE((SELECT SUM(bi.qty) FROM booking_items bi
         JOIN bookings b ON b.id = bi.booking_id
         WHERE bi.variant_id = v.id AND b.status IN ('menunggu_verifikasi','disetujui','sedang_disewa','denda')
+        AND COALESCE((SELECT pay.status_pembayaran FROM payments pay
+          WHERE pay.booking_id=b.id ORDER BY pay.id DESC LIMIT 1), '') <> 'ditolak'
         AND b.tgl_mulai <= ? AND b.tgl_selesai >= ?), 0) FROM product_variants v WHERE v.id = ?");
   $q->execute([$end, $start, $vid]);
   return (int)$q->fetchColumn();

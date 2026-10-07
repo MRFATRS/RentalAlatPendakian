@@ -107,13 +107,19 @@ CREATE TABLE payments (
   booking_id     INT NOT NULL,
   jenis          ENUM('dp','pelunasan','lunas','denda') NOT NULL,
   jumlah         INT NOT NULL,
-  metode         VARCHAR(50),                      -- Midtrans / VA BCA / GoPay, dll
-  order_id       VARCHAR(100) NULL,                -- order_id dari payment gateway
+  metode         VARCHAR(50),                      -- QRIS / Transfer Bank / Bayar di Tempat
+  order_id       VARCHAR(100) NULL,
   bukti_bayar    VARCHAR(255) NULL,
   status         ENUM('pending','berhasil','gagal','kadaluarsa') NOT NULL DEFAULT 'pending',
+  status_pembayaran ENUM('menunggu_verifikasi','lunas','ditolak','bayar_di_tempat','belum_dibayar')
+                     NOT NULL DEFAULT 'belum_dibayar',
+  waktu_upload   DATETIME NULL,
+  waktu_verifikasi DATETIME NULL,
+  diverifikasi_oleh INT NULL,
   paid_at        DATETIME NULL,
   created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  FOREIGN KEY (diverifikasi_oleh) REFERENCES admins(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- 9. DENDA (terlambat / barang rusak)

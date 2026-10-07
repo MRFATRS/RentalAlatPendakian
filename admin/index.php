@@ -9,6 +9,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (isset($_POST['status'], STATUS_LABEL[$_POST['status']])) {
     $bookingId = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
     if ($bookingId !== false && $bookingId > 0) {
+      $requiresPaid = in_array($_POST['status'], ['disetujui', 'sedang_disewa', 'selesai', 'denda'], true);
+      if ($requiresPaid) {
+        $paymentStatusQuery = $pdo->prepare('SELECT status_pembayaran FROM payments WHERE booking_id=? ORDER BY id DESC LIMIT 1');
+        $paymentStatusQuery->execute([$bookingId]);
+        $bookingPaymentStatus = $paymentStatusQuery->fetchColumn();
+        if ($bookingPaymentStatus && $bookingPaymentStatus !== 'lunas') {
+          header('Location: index.php?pesan=payment_required#bookings');
+          exit;
+        }
+      }
       $pdo->prepare("UPDATE bookings SET status=?, tgl_kembali_aktual=IF(?='selesai', CURDATE(), tgl_kembali_aktual) WHERE id=?")
           ->execute([$_POST['status'], $_POST['status'], $bookingId]);
       header('Location: index.php?pesan=booking_updated');
@@ -40,6 +50,7 @@ $messages = [
   'deleted' => ['ok', 'Produk berhasil dihapus.'],
   'deleted_no_image' => ['err', 'Produk berhasil dihapus, tetapi file fotonya gagal dihapus dari server.'],
   'booking_updated' => ['ok', 'Status booking berhasil diperbarui.'],
+  'payment_required' => ['err', 'Booking belum dapat diproses sebelum pembayaran dikonfirmasi lunas.'],
   'csrf' => ['err', 'Permintaan tidak valid atau kedaluwarsa. Silakan coba kembali.'],
   'invalid' => ['err', 'Data perubahan status tidak valid.'],
   'not_found' => ['err', 'Produk tidak ditemukan.'],
@@ -57,12 +68,12 @@ $notice = $messages[$_GET['pesan'] ?? ''] ?? null;
 <body>
 <nav>
   <a class="brand" href="index.php">Admin · Rental Pendakian</a>
-  <div><span><?= e($_SESSION['admin_username']) ?></span><a href="../index.php">Lihat Situs</a><a href="logout.php">Logout Admin</a></div>
+  <div><span><?= e($_SESSION['admin_username']) ?></span><a href="pembayaran.php">Pembayaran</a><a href="../index.php">Lihat Situs</a><a href="logout.php">Logout Admin</a></div>
 </nav>
 <main class="admin-dashboard">
   <div class="admin-page-heading">
     <div><h1>Kelola Produk</h1></div>
-    <a class="btn" href="produk_tambah.php">+ Tambah Produk</a>
+    <div class="admin-page-actions"><a class="btn alt" href="pembayaran.php">Verifikasi Pembayaran</a><a class="btn" href="produk_tambah.php">+ Tambah Produk</a></div>
   </div>
   <?php if ($notice): ?><div class="alert <?= e($notice[0]) ?>"><?= e($notice[1]) ?></div><?php endif; ?>
 
