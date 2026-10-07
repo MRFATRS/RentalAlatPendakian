@@ -43,6 +43,17 @@ $bookings = $pdo->query(
    FROM bookings b JOIN users u ON u.id=b.user_id
    ORDER BY b.id DESC"
 )->fetchAll();
+$recentBookings = $pdo->query(
+  "SELECT b.id,b.kode_booking,b.tgl_mulai,b.tgl_selesai,b.subtotal,b.status,u.nama
+   FROM bookings b JOIN users u ON u.id=b.user_id
+   ORDER BY b.created_at DESC,b.id DESC LIMIT 5"
+)->fetchAll();
+$stats = [
+  'products' => (int)$pdo->query('SELECT COUNT(*) FROM products')->fetchColumn(),
+  'bookings' => (int)$pdo->query('SELECT COUNT(*) FROM bookings')->fetchColumn(),
+  'pending_payments' => (int)$pdo->query("SELECT COUNT(*) FROM payments WHERE status_pembayaran='menunggu_verifikasi'")->fetchColumn(),
+  'active_bookings' => (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status IN ('disetujui','sedang_disewa')")->fetchColumn(),
+];
 $csrfToken = admin_product_csrf_token();
 $messages = [
   'created' => ['ok', 'Produk berhasil ditambahkan.'],
@@ -57,29 +68,60 @@ $messages = [
   'not_found' => ['err', 'Produk tidak ditemukan.'],
 ];
 $notice = $messages[$_GET['pesan'] ?? ''] ?? null;
+require_once __DIR__ . '/../includes/admin_layout.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin · Rental Pendakian</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-<body>
-<nav>
-  <a class="brand" href="index.php">Admin · Rental Pendakian</a>
-  <div><span><?= e($_SESSION['admin_username']) ?></span><a href="ubah_password.php">Ubah Password</a><a href="pembayaran.php">Pembayaran</a><a href="../index.php">Lihat Situs</a><a href="logout.php">Logout Admin</a></div>
-</nav>
-<main class="admin-dashboard">
-  <div class="admin-page-heading">
-    <div><h1>Kelola Produk</h1></div>
-    <div class="admin-page-actions"><a class="btn alt" href="pembayaran.php">Verifikasi Pembayaran</a><a class="btn" href="produk_tambah.php">+ Tambah Produk</a></div>
-  </div>
+<?php admin_layout_start('Dashboard Admin', 'dashboard'); ?>
+  <section class="admin-welcome">
+    <div>
+      <span class="admin-welcome-eyebrow">RINGKASAN RENTAL</span>
+      <h2>Selamat datang kembali, Admin <span aria-hidden="true">👋</span></h2>
+      <p>Kelola produk, booking, dan pembayaran rental alat pendakian.</p>
+    </div>
+    <div class="admin-page-actions">
+      <a class="btn alt" href="pembayaran.php">Lihat Pembayaran</a>
+      <a class="btn" href="produk_tambah.php">Tambah Produk</a>
+    </div>
+  </section>
   <?php if ($notice): ?><div class="alert <?= e($notice[0]) ?>"><?= e($notice[1]) ?></div><?php endif; ?>
 
-  <section class="admin-section" aria-labelledby="products-title">
-    <div class="admin-section-heading"><h2 id="products-title">Daftar Produk</h2><span><?= count($products) ?> produk</span></div>
+  <section class="admin-stat-grid" aria-label="Statistik dashboard">
+    <article class="admin-stat-card"><span class="admin-stat-icon admin-stat-products"><?= admin_layout_icon('products') ?></span><div><span>Total Produk</span><strong><?= $stats['products'] ?></strong><small>Produk terdaftar</small></div></article>
+    <article class="admin-stat-card"><span class="admin-stat-icon admin-stat-bookings"><?= admin_layout_icon('bookings') ?></span><div><span>Total Booking</span><strong><?= $stats['bookings'] ?></strong><small>Seluruh pemesanan</small></div></article>
+    <article class="admin-stat-card admin-stat-pending"><span class="admin-stat-icon"><?= admin_layout_icon('payments') ?></span><div><span>Menunggu Verifikasi</span><strong><?= $stats['pending_payments'] ?></strong><small>Pembayaran perlu diperiksa</small></div></article>
+    <article class="admin-stat-card"><span class="admin-stat-icon admin-stat-active"><?= admin_layout_icon('dashboard') ?></span><div><span>Booking Aktif</span><strong><?= $stats['active_bookings'] ?></strong><small>Disetujui atau sedang disewa</small></div></article>
+  </section>
+
+  <section class="admin-section admin-recent-section" aria-labelledby="recent-bookings-title">
+    <div class="admin-section-heading">
+      <div><h2 id="recent-bookings-title">Booking Terbaru</h2><p>Pemesanan terkini dari pelanggan.</p></div>
+      <a class="admin-text-link" href="#bookings">Lihat semua booking <span aria-hidden="true">→</span></a>
+    </div>
+    <?php if ($recentBookings): ?>
+      <div class="admin-table-wrap">
+        <table class="admin-table admin-recent-table">
+          <thead><tr><th>Kode Booking</th><th>Penyewa</th><th>Tanggal Sewa</th><th>Biaya Sewa</th><th>Status</th></tr></thead>
+          <tbody>
+          <?php foreach ($recentBookings as $booking):
+            $bookingStatusClass = 'status-' . $booking['status'];
+          ?>
+            <tr>
+              <td><strong class="admin-booking-code"><?= e($booking['kode_booking']) ?></strong></td>
+              <td><?= e($booking['nama']) ?></td>
+              <td><?= e($booking['tgl_mulai']) ?> <span class="admin-date-separator">—</span> <?= e($booking['tgl_selesai']) ?></td>
+              <td class="admin-table-price"><?= rp($booking['subtotal']) ?></td>
+              <td><span class="booking-status-badge <?= e($bookingStatusClass) ?>"><span></span><?= e(STATUS_LABEL[$booking['status']] ?? $booking['status']) ?></span></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php else: ?>
+      <div class="admin-empty admin-recent-empty"><h3>Belum ada booking</h3><p>Booking terbaru akan muncul di sini.</p></div>
+    <?php endif; ?>
+  </section>
+
+  <section class="admin-section" id="products" aria-labelledby="products-title">
+    <div class="admin-section-heading"><div><h2 id="products-title">Kelola Produk</h2><p>Atur katalog alat yang tersedia untuk disewa.</p></div><span class="admin-count-badge"><?= count($products) ?> produk</span></div>
     <?php if ($products): ?>
       <div class="admin-table-wrap">
         <table class="admin-table">
@@ -110,8 +152,8 @@ $notice = $messages[$_GET['pesan'] ?? ''] ?? null;
     <?php endif; ?>
   </section>
 
-  <section class="admin-section" aria-labelledby="bookings-title">
-    <div class="admin-section-heading"><h2 id="bookings-title">Kelola Booking</h2><span><?= count($bookings) ?> booking</span></div>
+  <section class="admin-section" id="bookings" aria-labelledby="bookings-title">
+    <div class="admin-section-heading"><div><h2 id="bookings-title">Kelola Booking</h2><p>Perbarui status sewa dan periksa identitas pelanggan.</p></div><span class="admin-count-badge"><?= count($bookings) ?> booking</span></div>
     <?php if ($bookings): ?>
       <div class="admin-table-wrap">
         <table class="admin-table">
@@ -138,6 +180,4 @@ $notice = $messages[$_GET['pesan'] ?? ''] ?? null;
       </div>
     <?php else: ?><p class="muted">Belum ada booking.</p><?php endif; ?>
   </section>
-</main>
-</body>
-</html>
+<?php admin_layout_end(); ?>

@@ -27,17 +27,7 @@ if (in_array($statusFilter, $allowedStatuses, true)) {
   }));
 }
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pembayaran · Admin Rental Pendakian</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-<body>
-<nav><a class="brand" href="index.php">Admin · Rental Pendakian</a><div><span><?= e($_SESSION['admin_username']) ?></span><a href="ubah_password.php">Ubah Password</a><a href="index.php">Dashboard</a><a href="logout.php">Logout Admin</a></div></nav>
-<main class="admin-dashboard">
+<?php require_once __DIR__ . '/../includes/admin_layout.php'; admin_layout_start('Pembayaran', 'payments'); ?>
 <div class="admin-page-heading">
   <div><h1>Pembayaran</h1><p>Periksa bukti pembayaran dan status transaksi booking.</p></div>
   <a class="btn alt" href="index.php">Kembali ke Dashboard</a>
@@ -75,6 +65,4 @@ if (in_array($statusFilter, $allowedStatuses, true)) {
     </div>
   <?php else: ?><div class="admin-empty"><h3>Tidak ada pembayaran</h3><p>Belum ada transaksi untuk filter ini.</p></div><?php endif; ?>
 </section>
-</main>
-</body>
-</html>
+<?php admin_layout_end(); ?>

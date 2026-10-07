@@ -126,17 +126,7 @@ if (($_GET['pesan'] ?? '') === 'rejected') { $success = 'Pembayaran ditolak. Use
 $proof = basename((string)$payment['bukti_bayar']);
 $proofPath = __DIR__ . '/../uploads/bukti_pembayaran/' . $proof;
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Detail Pembayaran · Admin Rental Pendakian</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-<body>
-<nav><a class="brand" href="index.php">Admin · Rental Pendakian</a><div><span><?= e($_SESSION['admin_username']) ?></span><a href="ubah_password.php">Ubah Password</a><a href="pembayaran.php">Pembayaran</a><a href="logout.php">Logout Admin</a></div></nav>
-<main class="admin-dashboard">
+<?php require_once __DIR__ . '/../includes/admin_layout.php'; admin_layout_start('Detail Pembayaran', 'payments'); ?>
   <div class="admin-page-heading"><div><h1>Detail Pembayaran</h1><p>Booking <?= e($payment['kode_booking']) ?></p></div><a class="btn alt" href="pembayaran.php">Kembali</a></div>
   <?php if ($error): ?><div class="alert err"><?= e($error) ?></div><?php endif; ?>
   <?php if ($success): ?><div class="alert ok"><?= e($success) ?></div><?php endif; ?>
@@ -198,6 +188,4 @@ $proofPath = __DIR__ . '/../uploads/bukti_pembayaran/' . $proof;
       <?php endif; ?>
     </section>
   </div>
-</main>
-</body>
-</html>
+<?php admin_layout_end(); ?>

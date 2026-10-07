@@ -49,20 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ubah Password · Admin Rental Pendakian</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-<body>
-<nav>
-  <a class="brand" href="index.php">Admin · Rental Pendakian</a>
-  <div><span><?= e($_SESSION['admin_username']) ?></span><a href="index.php">Dashboard</a><a href="pembayaran.php">Pembayaran</a><a href="logout.php">Logout Admin</a></div>
-</nav>
-<main class="admin-dashboard">
+<?php require_once __DIR__ . '/../includes/admin_layout.php'; admin_layout_start('Ubah Password', 'settings'); ?>
   <div class="admin-page-heading">
     <div><h1>Ubah Password</h1><p>Perbarui password akun Admin Anda.</p></div>
   </div>
@@ -82,6 +69,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </form>
   </section>
-</main>
-</body>
-</html>
+<?php admin_layout_end(); ?>

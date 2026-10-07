@@ -91,18 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $csrfToken = admin_product_csrf_token();
+require_once __DIR__ . '/../includes/admin_layout.php';
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Edit Produk · Admin Rental Pendakian</title>
-  <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-<body>
-<nav><a class="brand" href="index.php">Admin · Rental Pendakian</a><div><a href="ubah_password.php">Ubah Password</a><a href="index.php">Kembali ke Dashboard</a><a href="logout.php">Logout Admin</a></div></nav>
-<main class="admin-dashboard">
+<?php admin_layout_start('Edit Produk', 'products'); ?>
   <div class="admin-page-heading"><div><h1>Edit Produk</h1><p>Perbarui detail produk dan stoknya.</p></div></div>
   <section class="admin-form-card">
     <?php if ($error): ?><div class="alert err"><?= e($error) ?></div><?php endif; ?>
@@ -129,6 +120,4 @@ $csrfToken = admin_product_csrf_token();
       <div class="admin-form-actions"><button class="btn" type="submit">Simpan Perubahan</button><a class="btn alt" href="index.php">Batal</a></div>
     </form>
   </section>
-</main>
-</body>
-</html>
+<?php admin_layout_end(); ?>
