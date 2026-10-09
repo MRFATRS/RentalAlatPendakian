@@ -2,9 +2,6 @@
 -- DATABASE: rental_pendakian
 -- Import lewat phpMyAdmin (XAMPP) -> tab Import
 -- =====================================================
-CREATE DATABASE IF NOT EXISTS rental_pendakian
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE rental_pendakian;
 
 -- 1. USERS (guest tidak disimpan; hanya yang register)
 CREATE TABLE users (
@@ -63,6 +60,9 @@ CREATE TABLE product_variants (
   product_id  INT NOT NULL,
   nama_varian VARCHAR(50) NOT NULL,               -- contoh: "Hijau", "Merah", "60L"
   stok_total  INT NOT NULL DEFAULT 0,
+  is_default  TINYINT(1) NOT NULL DEFAULT 0,       -- stok internal untuk produk tanpa varian pilihan
+  is_active   TINYINT(1) NOT NULL DEFAULT 1,
+  KEY idx_product_variants_product_active (product_id, is_active, is_default),
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

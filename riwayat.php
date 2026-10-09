@@ -8,7 +8,7 @@ $st = $pdo->prepare(
    FROM bookings b
    JOIN (
      SELECT bi.booking_id,
-       GROUP_CONCAT(CONCAT(p.nama,' ',v.nama_varian,' x',bi.qty) SEPARATOR ', ') AS items
+       GROUP_CONCAT(CONCAT(p.nama,CASE WHEN v.is_default=1 THEN '' ELSE CONCAT(' ',v.nama_varian) END,' x',bi.qty) SEPARATOR ', ') AS items
      FROM booking_items bi
      JOIN product_variants v ON v.id=bi.variant_id
      JOIN products p ON p.id=v.product_id

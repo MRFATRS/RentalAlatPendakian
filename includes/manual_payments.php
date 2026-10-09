@@ -14,6 +14,23 @@ function payment_verify_csrf($token){
     && hash_equals($_SESSION['payment_csrf'], $token);
 }
 
+function payment_qris_image_path(){
+  return dirname(__DIR__) . '/assets/images/QRIS/qris-rental.png';
+}
+
+function payment_qris_image_available(){
+  $path = payment_qris_image_path();
+  if (!is_file($path) || !is_readable($path)) {
+    return false;
+  }
+  $image = @getimagesize($path);
+  return $image !== false && $image['mime'] === 'image/png';
+}
+
+function payment_qris_image_url(){
+  return 'assets/images/QRIS/qris-rental.png';
+}
+
 function payment_upload_proof(array $file){
   if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
     return ['error' => 'Unggah bukti pembayaran terlebih dahulu.'];
@@ -86,5 +103,8 @@ function payment_status_label($status){
 }
 
 function payment_method_available($method, array $bankConfig){
+  if ($method === 'qris') {
+    return payment_qris_image_available();
+  }
   return in_array($method, ['qris', 'transfer_bank', 'bayar_di_tempat'], true);
 }

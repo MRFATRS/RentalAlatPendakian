@@ -41,7 +41,13 @@ Website sistem informasi penyewaan alat pendakian gunung berbasis PHP Native dan
 4. **Konfigurasi Koneksi Database:**
    Sesuaikan pengaturan database di file koneksi Anda (biasanya di folder `config/database.php`) jika nama database lokal Anda berbeda.
 
-5. **Akses Website:**
+5. **Database yang sudah terpasang:**
+   Untuk database lama yang sudah memiliki tabel `product_variants`, jalankan satu kali
+   `database/migrations/20261009_product_variant_management.sql` melalui phpMyAdmin.
+   Instalasi baru yang mengimpor `rental_pendakian.sql` tidak memerlukan migrasi ini.
+   Varian yang tidak lagi dipakai akan dinonaktifkan jika masih dirujuk riwayat booking.
+
+6. **Akses Website:**
    - **Halaman Utama (User):** `http://localhost/Rentalalatpendakian/`
    - **Halaman Login Admin:** `http://localhost/Rentalalatpendakian/admin/login.php`
 

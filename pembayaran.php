@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/manual_payments.php';
 login_required();
 $paymentConfig = require __DIR__ . '/config/payment.php';
+$qrisImageAvailable = payment_qris_image_available();
 $paymentId = filter_var($_GET['id'] ?? $_POST['id'] ?? null, FILTER_VALIDATE_INT);
 if ($paymentId === false || $paymentId === null || $paymentId < 1) {
   header('Location: riwayat.php');
@@ -11,7 +12,7 @@ if ($paymentId === false || $paymentId === null || $paymentId < 1) {
 $paymentQuery = $pdo->prepare(
   "SELECT pay.id,pay.booking_id,pay.jumlah,pay.metode,pay.status,pay.status_pembayaran,pay.bukti_bayar,
       b.kode_booking,b.user_id,b.subtotal,b.total_bayar,b.tgl_mulai,b.tgl_selesai,
-      GROUP_CONCAT(CONCAT(p.nama,' ',v.nama_varian,' x',bi.qty) SEPARATOR ', ') AS items
+      GROUP_CONCAT(CONCAT(p.nama,CASE WHEN v.is_default=1 THEN '' ELSE CONCAT(' ',v.nama_varian) END,' x',bi.qty) SEPARATOR ', ') AS items
    FROM payments pay
    JOIN bookings b ON b.id=pay.booking_id
    JOIN booking_items bi ON bi.booking_id=b.id
@@ -47,7 +48,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   } elseif (!in_array($method, ['qris', 'transfer_bank'], true)) {
     $error = 'Pilih metode pembayaran yang valid.';
   } elseif (!payment_method_available($method, $paymentConfig)) {
-    $error = 'Transfer bank belum tersedia. Admin perlu mengisi konfigurasi rekening di config/payment.php.';
+    $error = $method === 'qris'
+      ? 'Gambar QRIS merchant tidak tersedia atau tidak valid. Silakan pilih metode pembayaran lain atau hubungi admin.'
+      : 'Transfer bank belum tersedia. Admin perlu mengisi konfigurasi rekening di config/payment.php.';
   } else {
     $upload = payment_upload_proof($_FILES['bukti_pembayaran'] ?? []);
     if (isset($upload['error'])) {
@@ -105,7 +108,7 @@ include 'includes/header.php';
       <input type="hidden" name="id" value="<?= (int)$paymentId ?>">
       <fieldset class="payment-methods">
         <legend>Metode Pembayaran</legend>
-        <label class="payment-method-option"><input type="radio" name="metode_pembayaran" value="qris"<?= $method === 'qris' ? ' checked' : '' ?>><span><strong>QRIS</strong><small>Scan QRIS merchant</small></span></label>
+        <label class="payment-method-option<?= $qrisImageAvailable ? '' : ' is-disabled' ?>"><input type="radio" name="metode_pembayaran" value="qris"<?= $method === 'qris' ? ' checked' : '' ?><?= $qrisImageAvailable ? '' : ' disabled' ?>><span><strong>QRIS</strong><small><?= $qrisImageAvailable ? 'Scan QRIS merchant dan masukkan jumlah yang tertera' : 'QRIS sementara tidak tersedia' ?></small></span></label>
         <label class="payment-method-option">
           <input type="radio" name="metode_pembayaran" value="transfer_bank"<?= $method === 'transfer_bank' ? ' checked' : '' ?>>
           <span><strong>Transfer Bank</strong><small>Bayar melalui transfer ke rekening kami</small></span>
@@ -114,8 +117,13 @@ include 'includes/header.php';
       <div class="payment-instructions">
         <h3>Informasi Pembayaran</h3>
         <div data-resubmit-panel="qris"<?= $method === 'qris' ? '' : ' hidden' ?>>
-          <img class="merchant-qris" src="assets/images/QRIS/qris-rental.png" alt="QRIS Merchant Rental Alat Pendakian">
-          <p>Silakan scan QRIS dan bayar sesuai jumlah pembayaran di atas.</p>
+          <?php if ($qrisImageAvailable): ?>
+            <img class="merchant-qris" src="<?= e(payment_qris_image_url()) ?>" alt="QRIS statis merchant Rental Alat Pendakian" data-qris-image>
+            <div class="qris-image-error" data-qris-image-error hidden>Gambar QRIS gagal dimuat. Muat ulang halaman atau pilih metode pembayaran lain.</div>
+            <p>QRIS ini menggunakan kode statis. Masukkan tepat <strong><?= rp($payment['jumlah']) ?></strong> di aplikasi pembayaran, kemudian unggah bukti transaksi.</p>
+          <?php else: ?>
+            <div class="alert err qris-image-error">Gambar QRIS merchant tidak ditemukan atau formatnya tidak valid. QRIS tidak dapat digunakan saat ini.</div>
+          <?php endif; ?>
         </div>
         <div data-resubmit-panel="transfer_bank"<?= $method === 'transfer_bank' ? '' : ' hidden' ?>>
           <p>Nama Bank: <strong><?= e($paymentConfig['bank']['nama_bank']) ?></strong><br>
@@ -134,12 +142,31 @@ include 'includes/header.php';
   <p><a href="riwayat.php">Kembali ke riwayat</a></p>
 </section>
 <script>
-document.querySelectorAll('input[name="metode_pembayaran"]').forEach((radio) => {
-  radio.addEventListener('change', () => {
-    document.querySelectorAll('[data-resubmit-panel]').forEach((panel) => {
-      panel.hidden = panel.dataset.resubmitPanel !== radio.value;
-    });
-  });
-});
+(() => {
+  const radios = document.querySelectorAll('input[name="metode_pembayaran"]');
+  const panels = document.querySelectorAll('[data-resubmit-panel]');
+  const qrisOption = document.querySelector('input[name="metode_pembayaran"][value="qris"]');
+  const qrisImage = document.querySelector('[data-qris-image]');
+  const qrisImageError = document.querySelector('[data-qris-image-error]');
+  const updateMethod = (method) => {
+    panels.forEach((panel) => { panel.hidden = panel.dataset.resubmitPanel !== method; });
+  };
+  radios.forEach((radio) => radio.addEventListener('change', () => updateMethod(radio.value)));
+  if (qrisImage && qrisImageError && qrisOption) {
+    const showQrisError = () => {
+      qrisImage.hidden = true;
+      qrisImageError.hidden = false;
+      qrisOption.checked = false;
+      qrisOption.disabled = true;
+      const fallbackOption = Array.from(radios).find((radio) => !radio.disabled);
+      if (fallbackOption) {
+        fallbackOption.checked = true;
+        updateMethod(fallbackOption.value);
+      }
+    };
+    qrisImage.addEventListener('error', showQrisError);
+    if (qrisImage.complete && qrisImage.naturalWidth === 0) showQrisError();
+  }
+})();
 </script>
 <?php include 'includes/footer.php'; ?>

@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $products = $pdo->query(
   "SELECT p.id, p.nama, p.deskripsi, p.harga_per_hari, p.gambar, p.is_active,
-      c.nama AS kategori, COALESCE(SUM(v.stok_total), 0) AS stok
+      c.nama AS kategori, COALESCE(SUM(CASE WHEN v.is_active=1 THEN v.stok_total ELSE 0 END), 0) AS stok
    FROM products p
    JOIN categories c ON c.id=p.category_id
    LEFT JOIN product_variants v ON v.product_id=p.id

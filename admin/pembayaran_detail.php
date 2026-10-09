@@ -23,7 +23,7 @@ if (!$payment) {
   exit;
 }
 $itemQuery = $pdo->prepare(
-  'SELECT p.nama,v.nama_varian,bi.qty,bi.harga_per_hari,bi.subtotal
+  'SELECT p.nama,v.nama_varian,v.is_default,bi.qty,bi.harga_per_hari,bi.subtotal
    FROM booking_items bi
    JOIN product_variants v ON v.id=bi.variant_id
    JOIN products p ON p.id=v.product_id
@@ -144,7 +144,7 @@ $proofPath = __DIR__ . '/../uploads/bukti_pembayaran/' . $proof;
       </dl>
       <h3>Alat yang disewa</h3>
       <?php foreach ($items as $item): ?>
-        <p><?= e($item['nama']) ?> (<?= e($item['nama_varian']) ?>) × <?= (int)$item['qty'] ?> · <?= rp($item['subtotal']) ?></p>
+        <p><?= e($item['nama']) ?><?= (int)$item['is_default'] === 1 ? '' : ' (' . e($item['nama_varian']) . ')' ?> × <?= (int)$item['qty'] ?> · <?= rp($item['subtotal']) ?></p>
       <?php endforeach; ?>
     </section>
     <section class="admin-section">

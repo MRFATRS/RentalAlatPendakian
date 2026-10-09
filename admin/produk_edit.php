@@ -17,6 +17,7 @@ if (!$product) {
 }
 $categories = $pdo->query('SELECT id,nama FROM categories ORDER BY nama')->fetchAll();
 $variants = admin_product_stock_variants($pdo, $productId);
+$variantNames = array_column(admin_product_managed_variants($pdo, $productId), 'nama_varian');
 $currentStock = array_sum(array_column($variants, 'stok_total'));
 $form = [
   'nama' => $product['nama'],
@@ -29,6 +30,7 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $form = $_POST;
+  $variantNames = is_array($_POST['varian'] ?? null) ? $_POST['varian'] : [];
   if (!admin_product_verify_csrf($_POST['csrf_token'] ?? null)) {
     $error = 'Permintaan tidak valid atau kedaluwarsa. Muat ulang halaman dan coba kembali.';
   } else {
@@ -67,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $productId,
             ]);
           }
-          admin_product_set_stock($pdo, $productId, $validated['data']['stok']);
+          admin_product_sync_variants($pdo, $productId, $validated['data']['stok'], $validated['data']['varian']);
           $pdo->commit();
 
           if ($newImage && $product['gambar'] && !admin_product_remove_image($product['gambar'])) {
@@ -110,6 +112,7 @@ require_once __DIR__ . '/../includes/admin_layout.php';
         <div><label for="harga_per_hari">Harga sewa per hari (Rp)</label><input id="harga_per_hari" name="harga_per_hari" type="number" min="1" step="1" value="<?= e($form['harga_per_hari'] ?? '') ?>" required></div>
         <div><label for="stok">Stok total</label><input id="stok" name="stok" type="number" min="0" step="1" value="<?= e($form['stok'] ?? '0') ?>" required></div>
       </div>
+      <?php admin_product_variant_fields($variantNames); ?>
       <label for="deskripsi">Deskripsi</label>
       <textarea id="deskripsi" name="deskripsi" rows="5" maxlength="10000"><?= e($form['deskripsi'] ?? '') ?></textarea>
       <?php if ($product['gambar'] && is_file(__DIR__ . '/../uploads/produk/' . basename($product['gambar']))): ?>
