@@ -1,7 +1,7 @@
 <?php require_once __DIR__ . '/functions.php'; ?>
 <!DOCTYPE html><html lang="id"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rental Alat Pendakian</title><link rel="stylesheet" href="assets/css/style.css?v=user-navbar-profile-20261007-2"></head><body>
+<title>Rental Alat Pendakian</title><link rel="stylesheet" href="assets/css/style.css?v=user-navbar-guest-profile-20261028"></head><body>
 <?php
 $userLoggedIn = !empty($_SESSION['user_id']) && ($_SESSION['user_role'] ?? '') === 'user';
 $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
@@ -31,29 +31,42 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
         </a>
       </div>
       <div class="user-navbar-account">
-        <?php if ($userLoggedIn): ?>
-          <div class="user-navbar-profile">
-            <button class="user-navbar-profile-trigger" type="button" aria-expanded="false" aria-haspopup="true" aria-controls="user-profile-menu">
-              <span class="user-navbar-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
-              <span class="user-navbar-username"><?= e($_SESSION['user_username']) ?></span>
-              <svg class="user-navbar-profile-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-            </button>
-            <div class="user-navbar-profile-menu" id="user-profile-menu" hidden>
-              <div class="user-navbar-profile-heading">
-                <span class="user-navbar-profile-menu-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
-                <span class="user-navbar-profile-menu-name"><?= e($_SESSION['user_username']) ?></span>
-              </div>
-              <a class="user-navbar-profile-logout" href="logout.php">
+        <div class="user-navbar-profile<?= $userLoggedIn ? ' is-authenticated' : ' is-guest' ?>">
+          <button class="user-navbar-profile-trigger" type="button" aria-expanded="false" aria-haspopup="true" aria-controls="user-profile-menu">
+            <span class="user-navbar-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+            <span class="user-navbar-profile-label">
+              <span class="user-navbar-username"><?= $userLoggedIn ? e($_SESSION['user_username']) : 'Guest' ?></span>
+              <span class="user-navbar-profile-status"><?= $userLoggedIn ? 'Akun aktif' : 'Belum login' ?></span>
+            </span>
+            <svg class="user-navbar-profile-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="user-navbar-profile-menu" id="user-profile-menu" hidden>
+            <div class="user-navbar-profile-heading">
+              <span class="user-navbar-profile-menu-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+              <span class="user-navbar-profile-menu-copy">
+                <span class="user-navbar-profile-menu-name"><?= $userLoggedIn ? e($_SESSION['user_username']) : 'Guest' ?></span>
+                <span class="user-navbar-profile-menu-description"><?= $userLoggedIn ? 'Akun Rental Pendakian' : 'Anda belum login' ?></span>
+              </span>
+            </div>
+            <?php if ($userLoggedIn): ?>
+              <a class="user-navbar-profile-action is-logout" href="logout.php">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3"/><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/></svg>
                 <span>Logout</span>
               </a>
-            </div>
+            <?php else: ?>
+              <div class="user-navbar-profile-actions">
+                <a class="user-navbar-profile-action" href="login.php">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3"/><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/></svg>
+                  <span>Login</span>
+                </a>
+                <a class="user-navbar-profile-action" href="register.php">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M3 21a6 6 0 0 1 12 0m3-11v6m-3-3h6"/></svg>
+                  <span>Daftar Akun</span>
+                </a>
+              </div>
+            <?php endif; ?>
           </div>
-        <?php else: ?>
-          <span class="user-navbar-guest">Mode Guest</span>
-          <a class="user-navbar-login" href="login.php">Login</a>
-          <a class="user-navbar-register" href="register.php">Daftar</a>
-        <?php endif; ?>
+        </div>
       </div>
     </nav>
   </div>
@@ -90,7 +103,10 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
     toggle.setAttribute('aria-label', isOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi');
   });
   menu.addEventListener('click', (event) => {
-    if (event.target.closest('a')) closeMenu();
+    if (event.target.closest('a')) {
+      closeProfileMenu();
+      closeMenu();
+    }
   });
   if (profile) {
     profileTrigger.addEventListener('click', () => {
