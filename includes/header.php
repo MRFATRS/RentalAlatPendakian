@@ -1,7 +1,7 @@
 <?php require_once __DIR__ . '/functions.php'; ?>
 <!DOCTYPE html><html lang="id"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rental Alat Pendakian</title><link rel="stylesheet" href="assets/css/style.css?v=user-navbar-guest-profile-20261028"></head><body>
+<title>Rental Alat Pendakian</title><link rel="stylesheet" href="assets/css/style.css?v=user-navbar-floating-20261104"></head><body>
 <?php
 $userLoggedIn = !empty($_SESSION['user_id']) && ($_SESSION['user_role'] ?? '') === 'user';
 $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
@@ -80,6 +80,18 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
   const profileTrigger = header.querySelector('.user-navbar-profile-trigger');
   const profileMenu = header.querySelector('.user-navbar-profile-menu');
   let profileCloseTimer;
+  let scrollUpdateScheduled = false;
+  const updateScrollState = () => {
+    header.classList.toggle('scrolled', window.scrollY > 80);
+    scrollUpdateScheduled = false;
+  };
+  window.addEventListener('scroll', () => {
+    if (scrollUpdateScheduled) return;
+    scrollUpdateScheduled = true;
+    window.requestAnimationFrame(updateScrollState);
+  }, { passive: true });
+  updateScrollState();
+
   const closeMenu = () => {
     header.classList.remove('is-open');
     toggle.setAttribute('aria-expanded', 'false');

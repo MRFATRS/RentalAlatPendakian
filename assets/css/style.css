@@ -25,21 +25,35 @@ body {
   z-index: 20;
   top: 0;
   width: 100%;
+  height: 88px;
   color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, .09);
-  background: rgba(27, 67, 50, .98);
-  box-shadow: 0 6px 22px rgba(20, 42, 33, .12);
-  backdrop-filter: blur(12px);
+  background: transparent;
 }
 .user-navbar-container {
   display: flex;
-  width: min(1240px, 100%);
-  min-height: 80px;
+  position: relative;
+  width: 100%;
+  height: 88px;
   align-items: center;
   justify-content: space-between;
   gap: 32px;
   margin: 0 auto;
   padding: 12px 28px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  background: #1e4738;
+  transition: width .45s cubic-bezier(.22, 1, .36, 1), height .45s cubic-bezier(.22, 1, .36, 1), margin .45s cubic-bezier(.22, 1, .36, 1), padding .45s cubic-bezier(.22, 1, .36, 1), border-radius .45s cubic-bezier(.22, 1, .36, 1), background-color .45s cubic-bezier(.22, 1, .36, 1), border-color .45s cubic-bezier(.22, 1, .36, 1), box-shadow .45s cubic-bezier(.22, 1, .36, 1), backdrop-filter .45s cubic-bezier(.22, 1, .36, 1), transform .45s cubic-bezier(.22, 1, .36, 1);
+}
+.user-navbar.scrolled .user-navbar-container {
+  width: 90%;
+  height: 64px;
+  margin: 0 auto;
+  padding: 7px 24px;
+  border-color: rgba(255, 255, 255, .12);
+  border-radius: 20px;
+  background: rgba(21, 56, 45, .96);
+  box-shadow: 0 14px 34px rgba(9, 29, 22, .3);
+  backdrop-filter: blur(12px);
+  transform: translateY(15px);
 }
 .user-navbar-brand {
   display: inline-flex;
@@ -51,6 +65,7 @@ body {
   letter-spacing: -.025em;
   white-space: nowrap;
   text-decoration: none;
+  transition: font-size .35s ease, gap .35s ease;
 }
 .user-navbar-brand-mark {
   display: grid;
@@ -61,9 +76,12 @@ body {
   border-radius: 13px;
   color: #e9f1e5;
   background: rgba(255, 255, 255, .09);
+  transition: width .35s ease, height .35s ease, border-radius .35s ease;
 }
 .user-navbar-brand-mark svg { display: block; width: 22px; height: 22px; }
 .user-navbar-brand-sub { color: #c4d4c8; font-weight: 500; }
+.user-navbar.scrolled .user-navbar-brand { gap: 9px; font-size: .96rem; }
+.user-navbar.scrolled .user-navbar-brand-mark { width: 36px; height: 36px; border-radius: 11px; }
 .user-navbar-menu { display: flex; align-items: center; gap: 26px; }
 .user-navbar-links, .user-navbar-account { display: flex; align-items: center; }
 .user-navbar-links { gap: 7px; }
@@ -78,11 +96,12 @@ body {
   font-size: .87rem;
   font-weight: 550;
   text-decoration: none;
-  transition: background-color .24s ease, color .24s ease, transform .24s ease;
+  transition: background-color .24s ease, color .24s ease, transform .24s ease, padding .35s ease, font-size .35s ease, min-height .35s ease;
 }
 .user-navbar-link svg { display: block; width: 17px; height: 17px; flex: 0 0 17px; }
 .user-navbar-link:hover { color: #fff; background: rgba(255, 255, 255, .09); transform: translateY(-1px); }
 .user-navbar-link.is-active { color: #fff; background: rgba(255, 255, 255, .14); }
+.user-navbar.scrolled .user-navbar-link { min-height: 38px; padding: 8px 12px; font-size: .83rem; }
 .user-navbar-account { gap: 10px; padding-left: 21px; border-left: 1px solid rgba(255,255,255,.18); }
 .user-navbar-profile { position: relative; display: flex; align-items: center; }
 .user-navbar-profile-trigger {
@@ -98,10 +117,13 @@ body {
   background: transparent;
   font: inherit;
   cursor: pointer;
-  transition: background-color .2s ease, border-color .2s ease;
+  transition: background-color .2s ease, border-color .2s ease, min-height .35s ease, gap .35s ease, padding .35s ease;
 }
 .user-navbar-profile-trigger:hover, .user-navbar-profile.is-open .user-navbar-profile-trigger { border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.09); }
 .user-navbar-avatar { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; color: #e5eee1; background: rgba(255,255,255,.1); }
+.user-navbar-avatar { transition: width .35s ease, height .35s ease, flex-basis .35s ease; }
+.user-navbar.scrolled .user-navbar-profile-trigger { min-height: 40px; gap: 8px; padding-top: 3px; padding-bottom: 3px; }
+.user-navbar.scrolled .user-navbar-avatar { width: 32px; height: 32px; flex-basis: 32px; }
 .user-navbar-avatar svg { display: block; width: 18px; height: 18px; }
 .user-navbar-profile-label { display: grid; min-width: 72px; gap: 2px; text-align: left; }
 .user-navbar-username { max-width: 135px; overflow: hidden; color: #fff; font-size: .82rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
@@ -770,7 +792,9 @@ footer { color: #d9e3dc; background: var(--forest-deep); }
   .admin-stat-card { gap: 11px; padding: 16px; }
 }
 @media (max-width: 760px) {
-  .user-navbar-container { position: relative; min-height: 72px; padding: 9px 18px; }
+  .user-navbar { height: 72px; }
+  .user-navbar-container { height: 72px; padding: 9px 18px; }
+  .user-navbar.scrolled .user-navbar-container { width: 92%; height: 60px; margin-top: 0; padding: 6px 14px; border-radius: 18px; transform: translateY(9px); }
   .user-navbar-toggle {
     display: grid;
     width: 40px;
@@ -782,10 +806,11 @@ footer { color: #d9e3dc; background: var(--forest-deep); }
     color: #fff;
     background: rgba(255,255,255,.08);
     cursor: pointer;
-    transition: background-color .2s ease, border-color .2s ease;
+    transition: background-color .2s ease, border-color .2s ease, width .35s ease, height .35s ease, flex-basis .35s ease;
   }
   .user-navbar-toggle:hover { border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.14); }
   .user-navbar-toggle svg { width: 20px; height: 20px; }
+  .user-navbar.scrolled .user-navbar-toggle { width: 36px; height: 36px; flex-basis: 36px; }
   .user-navbar-toggle-close { display: none; }
   .user-navbar.is-open .user-navbar-toggle-open { display: none; }
   .user-navbar.is-open .user-navbar-toggle-close { display: block; }
@@ -851,6 +876,7 @@ footer { color: #d9e3dc; background: var(--forest-deep); }
 }
 @media (max-width: 520px) {
   .user-navbar-container { padding-right: 15px; padding-left: 15px; }
+  .user-navbar.scrolled .user-navbar-container { padding-right: 12px; padding-left: 12px; }
   .user-navbar-menu { right: 10px; left: 10px; }
   .brand { font-size: .98rem; }
   .brand-mark { width: 34px; height: 34px; }
