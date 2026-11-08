@@ -26,4 +26,5 @@
   </div>
   <div class="footer-bottom">© <?= date('Y') ?> Rental Alat Pendakian. Semua hak dilindungi.</div>
 </footer>
+<?php include __DIR__ . '/whatsapp.php'; ?>
 </body></html>
