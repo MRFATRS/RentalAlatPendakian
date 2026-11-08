@@ -1,7 +1,7 @@
 <?php require_once __DIR__ . '/functions.php'; ?>
 <!DOCTYPE html><html lang="id"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rental Alat Pendakian</title><link rel="stylesheet" href="assets/css/style.css?v=whatsapp-20261109"></head><body>
+<title>Rental Alat Pendakian</title><link rel="stylesheet" href="assets/css/style.css?v=gallery-20261109"></head><body>
 <?php
 $userLoggedIn = !empty($_SESSION['user_id']) && ($_SESSION['user_role'] ?? '') === 'user';
 $currentPage = basename($_SERVER['PHP_SELF'] ?? '');

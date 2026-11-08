@@ -15,6 +15,9 @@ if (!$product) {
   header('Location: index.php?pesan=not_found');
   exit;
 }
+$imageQuery = $pdo->prepare('SELECT nama_foto FROM produk_foto WHERE product_id=?');
+$imageQuery->execute([$productId]);
+$productImages = array_column($imageQuery->fetchAll(), 'nama_foto');
 $referenceQuery = $pdo->prepare(
   'SELECT COUNT(*) FROM booking_items bi JOIN product_variants v ON v.id=bi.variant_id WHERE v.product_id=?'
 );
@@ -36,7 +39,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         throw new RuntimeException('Produk sudah tidak ditemukan.');
       }
       $pdo->commit();
-      $imageRemoved = admin_product_remove_image($product['gambar']);
+      if ($product['gambar']) { $productImages[] = $product['gambar']; }
+      $imageRemoved = true;
+      foreach (array_unique($productImages) as $filename) {
+        if (!admin_product_remove_unreferenced_image($pdo, $filename)) { $imageRemoved = false; }
+      }
       header('Location: index.php?pesan=' . ($imageRemoved ? 'deleted' : 'deleted_no_image'));
       exit;
     } catch (PDOException $exception) {
@@ -59,13 +66,16 @@ require_once __DIR__ . '/../includes/admin_layout.php';
     <?php if ($bookingReferences > 0): ?>
       <div class="alert">Produk ini terkait dengan <?= $bookingReferences ?> detail booking. Penghapusan dinonaktifkan agar riwayat transaksi tidak rusak.</div>
     <?php else: ?>
-      <div class="alert err">Produk dan foto yang tersimpan di server akan dihapus permanen.</div>
+      <div class="alert err">Produk dan seluruh foto yang terkait akan dihapus permanen.</div>
     <?php endif; ?>
     <h2><?= e($product['nama']) ?></h2>
     <p class="muted">Kategori: <?= e($product['kategori']) ?></p>
-    <?php if ($product['gambar'] && is_file(__DIR__ . '/../uploads/produk/' . basename($product['gambar']))): ?>
-      <img class="admin-delete-image" src="../uploads/produk/<?= e(basename($product['gambar'])) ?>" alt="<?= e($product['nama']) ?>">
-    <?php endif; ?>
+    <?php foreach ($productImages as $filename):
+      $filename = basename($filename);
+      if (!is_file(__DIR__ . '/../uploads/produk/' . $filename)) { continue; }
+    ?>
+      <img class="admin-delete-image" src="../uploads/produk/<?= e($filename) ?>" alt="<?= e($product['nama']) ?>">
+    <?php endforeach; ?>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
       <input type="hidden" name="id" value="<?= (int)$productId ?>">

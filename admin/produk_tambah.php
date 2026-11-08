@@ -18,37 +18,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($validated['error'])) {
       $error = $validated['error'];
     } else {
-      $upload = admin_product_upload($_FILES['gambar'] ?? []);
+      $upload = admin_product_upload_many($_FILES['fotos'] ?? []);
       if (isset($upload['error'])) {
         $error = $upload['error'];
-      } elseif (!$upload['filename']) {
-        $error = 'Foto produk wajib diunggah.';
+      } elseif (!$upload['files']) {
+        $error = 'Minimal satu foto produk wajib diunggah.';
       } else {
-        $image = $upload['filename'];
-        try {
-          $pdo->beginTransaction();
-          $insert = $pdo->prepare(
-            'INSERT INTO products (category_id,nama,deskripsi,harga_per_hari,gambar) VALUES (?,?,?,?,?)'
-          );
-          $insert->execute([
-            $validated['data']['category_id'],
-            $validated['data']['nama'],
-            $validated['data']['deskripsi'],
-            $validated['data']['harga_per_hari'],
-            $image,
-          ]);
-          admin_product_sync_variants($pdo, $pdo->lastInsertId(), $validated['data']['stok'], $validated['data']['varian']);
-          $pdo->commit();
-          header('Location: index.php?pesan=created');
-          exit;
-        } catch (PDOException $exception) {
-          if ($pdo->inTransaction()) { $pdo->rollBack(); }
-          admin_product_remove_image($image);
-          $error = admin_product_store_error($exception);
-        } catch (DomainException $exception) {
-          if ($pdo->inTransaction()) { $pdo->rollBack(); }
-          admin_product_remove_image($image);
-          $error = $exception->getMessage();
+        $photoLabels = $_POST['warna_baru'] ?? [];
+        if (!is_array($photoLabels) || count($photoLabels) !== count($upload['files'])) {
+          $error = 'Periksa kembali label setiap foto.';
+        } else {
+          foreach ($photoLabels as $label) {
+            $validatedLabel = admin_product_image_color($label);
+            if (isset($validatedLabel['error'])) { $error = $validatedLabel['error']; break; }
+          }
+        }
+        $primaryChoice = (string)($_POST['foto_utama'] ?? 'new:0');
+        if (!preg_match('/^new:(\d+)$/', $primaryChoice, $primaryMatch)
+            || (int)$primaryMatch[1] >= count($upload['files'])) {
+          $error = 'Pilih foto utama produk yang valid.';
+        }
+        if ($error) {
+          foreach ($upload['files'] as $image) { admin_product_remove_image($image['filename']); }
+        } else {
+          $primaryIndex = (int)$primaryMatch[1];
+          $photoLabels = array_map(static function($label){
+            return trim($label);
+          }, $photoLabels);
+          try {
+            $pdo->beginTransaction();
+            $primaryImage = $upload['files'][$primaryIndex]['filename'];
+            $insert = $pdo->prepare(
+              'INSERT INTO products (category_id,nama,deskripsi,harga_per_hari,gambar) VALUES (?,?,?,?,?)'
+            );
+            $insert->execute([
+              $validated['data']['category_id'],
+              $validated['data']['nama'],
+              $validated['data']['deskripsi'],
+              $validated['data']['harga_per_hari'],
+              $primaryImage,
+            ]);
+            $productId = (int)$pdo->lastInsertId();
+            $insertPhoto = $pdo->prepare(
+              'INSERT INTO produk_foto (product_id,nama_foto,warna,is_primary,urutan) VALUES (?,?,?,?,?)'
+            );
+            foreach ($upload['files'] as $index => $image) {
+              $insertPhoto->execute([
+                $productId,
+                $image['filename'],
+                $photoLabels[$index],
+                $index === $primaryIndex ? 1 : 0,
+                $index,
+              ]);
+            }
+            admin_product_sync_variants($pdo, $productId, $validated['data']['stok'], $validated['data']['varian']);
+            $pdo->commit();
+            header('Location: index.php?pesan=created');
+            exit;
+          } catch (PDOException $exception) {
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
+            foreach ($upload['files'] as $image) { admin_product_remove_image($image['filename']); }
+            $error = admin_product_store_error($exception);
+          } catch (DomainException $exception) {
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
+            foreach ($upload['files'] as $image) { admin_product_remove_image($image['filename']); }
+            $error = $exception->getMessage();
+          }
         }
       }
     }
@@ -78,9 +113,12 @@ require_once __DIR__ . '/../includes/admin_layout.php';
       <?php admin_product_variant_fields($variantNames); ?>
       <label for="deskripsi">Deskripsi</label>
       <textarea id="deskripsi" name="deskripsi" rows="5" maxlength="10000"><?= e($form['deskripsi'] ?? '') ?></textarea>
-      <label for="gambar">Foto produk <span class="admin-label-note">(JPG, PNG, WEBP · maksimal 3 MB)</span></label>
-      <input id="gambar" name="gambar" type="file" accept="image/jpeg,image/png,image/webp" required>
+      <label for="fotos">Foto produk <span class="admin-label-note">(JPG, JPEG, PNG, WEBP · maksimal 3 MB per foto · maks. 12 foto)</span></label>
+      <input id="fotos" name="fotos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple required data-product-photo-input>
+      <p class="admin-variant-help">Pilih beberapa foto sekaligus. Tambahkan label warna dan pilih foto utama dari pratinjau.</p>
+      <div class="admin-photo-list" data-product-photo-list aria-live="polite"></div>
       <div class="admin-form-actions"><button class="btn" type="submit">Tambah Produk</button><a class="btn alt" href="index.php">Batal</a></div>
     </form>
   </section>
+  <script src="../assets/js/admin-product-images.js" defer></script>
 <?php admin_layout_end(); ?>

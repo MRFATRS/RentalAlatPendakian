@@ -54,6 +54,18 @@ CREATE TABLE products (
   FOREIGN KEY (category_id) REFERENCES categories(id)
 ) ENGINE=InnoDB;
 
+-- Foto produk (foto lama pada products.gambar dimigrasikan ke tabel ini).
+CREATE TABLE produk_foto (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  product_id  INT NOT NULL,
+  nama_foto   VARCHAR(255) NOT NULL,
+  warna       VARCHAR(50) NULL,
+  is_primary  TINYINT(1) NOT NULL DEFAULT 0,
+  urutan      INT NOT NULL DEFAULT 0,
+  KEY idx_produk_foto_product_order (product_id, is_primary, urutan),
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 -- 5. VARIAN / WARNA (stok disimpan di sini)
 CREATE TABLE product_variants (
   id          INT AUTO_INCREMENT PRIMARY KEY,

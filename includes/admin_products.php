@@ -84,30 +84,33 @@ function admin_product_validate(PDO $pdo, array $input){
 }
 
 function admin_product_upload(array $file){
-  if (!isset($file['error']) || $file['error'] === UPLOAD_ERR_NO_FILE) {
-    return ['filename' => null];
-  }
-  if ($file['error'] !== UPLOAD_ERR_OK) {
-    return ['error' => 'Foto gagal diunggah. Silakan coba kembali.'];
-  }
-  if (!is_uploaded_file($file['tmp_name']) || $file['size'] > 3 * 1024 * 1024) {
-    return ['error' => 'Ukuran foto maksimal 3 MB.'];
+  $result = admin_product_upload_many($file);
+  if (isset($result['error'])) { return $result; }
+  return ['filename' => $result['files'][0]['filename'] ?? null];
+}
+
+function admin_product_upload_many(array $files){
+  if (!isset($files['error'])) { return ['files' => []]; }
+  if (is_array($files['error'])) {
+    $entries = [];
+    foreach ($files['error'] as $index => $error) {
+      if ($error === UPLOAD_ERR_NO_FILE) { continue; }
+      $entries[] = [
+        'error' => $error,
+        'name' => $files['name'][$index] ?? '',
+        'tmp_name' => $files['tmp_name'][$index] ?? '',
+        'size' => $files['size'][$index] ?? 0,
+      ];
+    }
+  } elseif ($files['error'] === UPLOAD_ERR_NO_FILE) {
+    return ['files' => []];
+  } else {
+    $entries = [$files];
   }
 
-  $imageInfo = @getimagesize($file['tmp_name']);
-  if ($imageInfo === false) {
-    return ['error' => 'File yang diunggah bukan gambar yang valid.'];
+  if (count($entries) > 12) {
+    return ['error' => 'Maksimal 12 foto dapat diunggah dalam satu kali proses.'];
   }
-  $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
-  $extensions = [
-    'image/jpeg' => 'jpg',
-    'image/png' => 'png',
-    'image/webp' => 'webp',
-  ];
-  if (!isset($extensions[$mime]) || $imageInfo['mime'] !== $mime) {
-    return ['error' => 'Format foto harus JPG, PNG, atau WEBP.'];
-  }
-
   $directory = dirname(__DIR__) . '/uploads/produk';
   if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
     return ['error' => 'Folder upload foto tidak dapat dibuat.'];
@@ -116,12 +119,69 @@ function admin_product_upload(array $file){
     return ['error' => 'Folder uploads/produk tidak memiliki izin tulis.'];
   }
 
-  $filename = bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
-  if (!move_uploaded_file($file['tmp_name'], $directory . '/' . $filename)) {
-    return ['error' => 'Foto tidak dapat disimpan ke folder produk.'];
-  }
+  $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+  $uploaded = [];
+  foreach ($entries as $file) {
+    if (($file['error'] ?? null) !== UPLOAD_ERR_OK) {
+      $error = ($file['error'] ?? null) === UPLOAD_ERR_INI_SIZE || ($file['error'] ?? null) === UPLOAD_ERR_FORM_SIZE
+        ? 'Ukuran setiap foto maksimal 3 MB.'
+        : 'Foto gagal diunggah. Silakan coba kembali.';
+      foreach ($uploaded as $image) { admin_product_remove_image($image['filename']); }
+      return ['error' => $error];
+    }
+    if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name']) || (int)($file['size'] ?? 0) < 1 || (int)$file['size'] > 3 * 1024 * 1024) {
+      foreach ($uploaded as $image) { admin_product_remove_image($image['filename']); }
+      return ['error' => 'Ukuran setiap foto harus lebih dari 0 dan maksimal 3 MB.'];
+    }
 
-  return ['filename' => $filename];
+    $imageInfo = @getimagesize($file['tmp_name']);
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+    if ($imageInfo === false || !isset($extensions[$mime]) || $imageInfo['mime'] !== $mime) {
+      foreach ($uploaded as $image) { admin_product_remove_image($image['filename']); }
+      return ['error' => 'Format setiap foto harus JPG, JPEG, PNG, atau WEBP yang valid.'];
+    }
+    if ($imageInfo[0] < 1 || $imageInfo[1] < 1 || $imageInfo[0] > 10000 || $imageInfo[1] > 10000
+        || $imageInfo[0] * $imageInfo[1] > 40000000) {
+      foreach ($uploaded as $image) { admin_product_remove_image($image['filename']); }
+      return ['error' => 'Dimensi foto terlalu besar. Gunakan foto maksimal 10.000 piksel per sisi dan 40 megapiksel.'];
+    }
+
+    $filename = bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
+    if (!move_uploaded_file($file['tmp_name'], $directory . '/' . $filename)) {
+      foreach ($uploaded as $image) { admin_product_remove_image($image['filename']); }
+      return ['error' => 'Foto tidak dapat disimpan ke folder produk.'];
+    }
+    $uploaded[] = ['filename' => $filename, 'original_name' => (string)($file['name'] ?? '')];
+  }
+  return ['files' => $uploaded];
+}
+
+function admin_product_file_at(array $files, $key){
+  if (!isset($files['error']) || !is_array($files['error']) || !array_key_exists($key, $files['error'])) {
+    return ['error' => UPLOAD_ERR_NO_FILE];
+  }
+  $file = [];
+  foreach (['name', 'type', 'tmp_name', 'error', 'size'] as $field) {
+    $file[$field] = $files[$field][$key] ?? null;
+  }
+  return $file;
+}
+
+function admin_product_images(PDO $pdo, $productId){
+  $query = $pdo->prepare(
+    'SELECT id,product_id,nama_foto,warna,is_primary,urutan
+     FROM produk_foto WHERE product_id=?
+     ORDER BY is_primary DESC,urutan ASC,id ASC'
+  );
+  $query->execute([$productId]);
+  return $query->fetchAll();
+}
+
+function admin_product_image_color($value){
+  if (!is_string($value)) { return ['error' => 'Label warna tidak valid.']; }
+  $value = trim($value);
+  if (strlen($value) > 50) { return ['error' => 'Label warna maksimal 50 karakter.']; }
+  return ['value' => $value];
 }
 
 function admin_product_remove_image($filename){
@@ -129,6 +189,20 @@ function admin_product_remove_image($filename){
   if ($filename === '') { return true; }
   $path = dirname(__DIR__) . '/uploads/produk/' . $filename;
   return !is_file($path) || unlink($path);
+}
+
+function admin_product_remove_unreferenced_image(PDO $pdo, $filename){
+  $filename = basename((string)$filename);
+  if ($filename === '') { return true; }
+  $reference = $pdo->prepare(
+    'SELECT 1 FROM produk_foto WHERE nama_foto=? LIMIT 1'
+  );
+  $reference->execute([$filename]);
+  if ($reference->fetchColumn()) { return true; }
+  $legacyReference = $pdo->prepare('SELECT 1 FROM products WHERE gambar=? LIMIT 1');
+  $legacyReference->execute([$filename]);
+  if ($legacyReference->fetchColumn()) { return true; }
+  return admin_product_remove_image($filename);
 }
 
 function admin_product_stock_variants(PDO $pdo, $productId){

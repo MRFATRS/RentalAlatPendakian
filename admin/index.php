@@ -30,12 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $products = $pdo->query(
-  "SELECT p.id, p.nama, p.deskripsi, p.harga_per_hari, p.gambar, p.is_active,
+  "SELECT p.id, p.nama, p.deskripsi, p.harga_per_hari, COALESCE(pf.nama_foto,p.gambar) AS gambar, p.is_active,
       c.nama AS kategori, COALESCE(SUM(CASE WHEN v.is_active=1 THEN v.stok_total ELSE 0 END), 0) AS stok
    FROM products p
    JOIN categories c ON c.id=p.category_id
+   LEFT JOIN produk_foto pf ON pf.product_id=p.id AND pf.is_primary=1
    LEFT JOIN product_variants v ON v.product_id=p.id
-   GROUP BY p.id, p.nama, p.deskripsi, p.harga_per_hari, p.gambar, p.is_active, c.nama
+   GROUP BY p.id, p.nama, p.deskripsi, p.harga_per_hari, p.gambar, pf.nama_foto, p.is_active, c.nama
    ORDER BY p.id DESC"
 )->fetchAll();
 $bookings = $pdo->query(
@@ -58,8 +59,9 @@ $csrfToken = admin_product_csrf_token();
 $messages = [
   'created' => ['ok', 'Produk berhasil ditambahkan.'],
   'updated' => ['ok', 'Produk berhasil diperbarui.'],
+  'updated_image_cleanup' => ['err', 'Produk berhasil diperbarui, tetapi sebagian file foto lama gagal dihapus dari server.'],
   'deleted' => ['ok', 'Produk berhasil dihapus.'],
-  'deleted_no_image' => ['err', 'Produk berhasil dihapus, tetapi file fotonya gagal dihapus dari server.'],
+  'deleted_no_image' => ['err', 'Produk berhasil dihapus, tetapi sebagian file fotonya gagal dihapus dari server.'],
   'booking_updated' => ['ok', 'Status booking berhasil diperbarui.'],
   'payment_required' => ['err', 'Booking belum dapat diproses sebelum pembayaran dikonfirmasi lunas.'],
   'password_diubah' => ['ok', 'Password berhasil diubah.'],

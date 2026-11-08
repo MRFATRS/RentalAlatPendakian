@@ -46,6 +46,12 @@ Website sistem informasi penyewaan alat pendakian gunung berbasis PHP Native dan
    `database/migrations/20261009_product_variant_management.sql` melalui phpMyAdmin.
    Instalasi baru yang mengimpor `rental_pendakian.sql` tidak memerlukan migrasi ini.
    Varian yang tidak lagi dipakai akan dinonaktifkan jika masih dirujuk riwayat booking.
+   Untuk database yang sudah berisi produk, jalankan juga
+   `database/migrations/20261109_multiple_product_images.sql` satu kali. Migrasi ini membuat
+   tabel `produk_foto` dan menyalin foto lama dari `products.gambar` sebagai foto utama.
+   Instalasi baru yang mengimpor `rental_pendakian.sql` sudah memiliki tabel tersebut.
+   Admin dapat menyimpan maksimal 12 foto per produk (maksimal 3 MB per foto, JPG/JPEG/PNG/WEBP),
+   memberi label warna, mengganti atau menghapus foto, dan memilih foto utama.
 
 6. **Akses Website:**
    - **Halaman Utama (User):** `http://localhost/Rentalalatpendakian/`

@@ -1,4 +1,5 @@
 <?php include 'includes/header.php';
+require_once __DIR__ . '/includes/product_images.php';
 $cats = $pdo->query("SELECT * FROM categories")->fetchAll();
 $slug = $_GET['kategori'] ?? '';
 $sql = "SELECT p.*, c.nama AS kategori, c.slug AS kategori_slug FROM products p JOIN categories c ON c.id=p.category_id WHERE p.is_active=1";
@@ -12,6 +13,12 @@ $imageByCategory = [
   'alat-masak' => 'alat-masak.jpg',
   'penerangan' => 'penerangan.jpg',
 ];
+$galleryProducts = $produk;
+foreach ($galleryProducts as &$galleryProduct) {
+  $galleryProduct['fallback_image'] = 'assets/images/catalog/' . ($imageByCategory[$galleryProduct['kategori_slug']] ?? $imageByCategory['tenda']);
+}
+unset($galleryProduct);
+$galleryImages = product_gallery_images_for_products($pdo, $galleryProducts);
 $categoryIcons = [
   'tenda' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 20 9-16 9 16H3Z"/><path d="m12 4 3 16M12 13l-3 7"/></svg>',
   'carrier' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5a4 4 0 0 1 8 0"/><path d="M6 7h12l2 13H4L6 7Z"/><path d="M8 11h8v5H8zM6 9l-2 2m14-2 2 2"/></svg>',
@@ -56,17 +63,12 @@ foreach ($cats as $category) {
   <?php if ($produk): ?>
     <div class="grid">
       <?php foreach ($produk as $p):
-        $fallbackImage = 'assets/images/catalog/' . ($imageByCategory[$p['kategori_slug']] ?? $imageByCategory['tenda']);
-        $uploadedImage = !empty($p['gambar']) ? basename($p['gambar']) : '';
-        $image = $uploadedImage && is_file(__DIR__ . '/uploads/produk/' . $uploadedImage)
-          ? 'uploads/produk/' . $uploadedImage
-          : $fallbackImage;
         $deskripsi = trim((string)($p['deskripsi'] ?? ''));
         if ($deskripsi === '') { $deskripsi = 'Perlengkapan ' . strtolower($p['kategori']) . ' untuk menemani perjalanan pendakianmu.'; }
       ?>
         <article class="card">
           <div class="card-image">
-            <img src="<?= e($image) ?>" alt="<?= e($p['nama']) ?>" loading="lazy">
+            <?php product_gallery_render($galleryImages[(int)$p['id']] ?? [], $p['nama']); ?>
           </div>
           <div class="card-content">
             <span class="category-badge"><?= e($p['kategori']) ?></span>

@@ -27,4 +27,5 @@
   <div class="footer-bottom">© <?= date('Y') ?> Rental Alat Pendakian. Semua hak dilindungi.</div>
 </footer>
 <?php include __DIR__ . '/whatsapp.php'; ?>
+<script src="assets/js/product-gallery.js?v=gallery-20261109" defer></script>
 </body></html>
